@@ -114,12 +114,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#0f172a] text-white p-12 flex-col relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-50 text-slate-900 p-12 flex-col relative overflow-hidden">
         {/* Logo */}
         <div className="mb-auto">
           <Link href="/" className="flex items-center gap-2.5">
             <Logo size="md" />
-            <span className="text-xl font-semibold">Mokra</span>
+            <span className="text-xl font-semibold text-slate-900">Mokra</span>
           </Link>
         </div>
 
@@ -127,7 +127,7 @@ export default function LoginPage() {
         <div className="space-y-8 my-auto">
           {/* Badges */}
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 text-slate-300 text-sm border border-slate-700">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-700 text-sm border border-slate-200 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               Mock APIs for AI Agents
             </span>
@@ -135,13 +135,13 @@ export default function LoginPage() {
 
           {/* Headline */}
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight text-slate-900">
               Test AI agents
-              <span className="block bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
                 with confidence
               </span>
             </h1>
-            <p className="mt-5 text-lg text-slate-400 max-w-md leading-relaxed">
+            <p className="mt-5 text-lg text-slate-600 max-w-md leading-relaxed">
               AI agents can test against mock environments identical to the third-party services they integrate with.
             </p>
           </div>
@@ -154,7 +154,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="mt-auto pt-8">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-400">
             Trusted by developers worldwide
           </p>
         </div>
