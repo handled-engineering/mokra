@@ -11,65 +11,49 @@ import { useToast } from "@/components/ui/use-toast"
 import { Logo } from "@/components/ui/logo"
 import { ArrowLeft, Check } from "lucide-react"
 
-function CodeTerminal() {
+function ShootingStars() {
   return (
-    <div className="rounded-xl bg-[#1e293b] border border-slate-700/50 shadow-2xl overflow-hidden">
-      {/* Terminal header */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-[#0f172a] border-b border-slate-700/50">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <div className="w-3 h-3 rounded-full bg-yellow-500" />
-          <div className="w-3 h-3 rounded-full bg-green-500" />
-        </div>
-        <span className="text-slate-400 text-sm ml-2 font-mono">mock-api.sh</span>
-      </div>
-      {/* Terminal content */}
-      <div className="p-5 font-mono text-sm">
-        <div className="text-slate-300">
-          <span className="text-emerald-400">$</span>{" "}
-          <span className="text-slate-300">curl </span>
-          <span className="text-cyan-400">https://api.mokra.dev/crm/contacts</span>
-        </div>
-        <div className="mt-4 text-slate-300">
-          <div className="text-slate-400">{"{"}</div>
-          <div className="pl-4">
-            <span className="text-cyan-400">&quot;contacts&quot;</span>
-            <span className="text-slate-400">: [</span>
-          </div>
-          <div className="pl-8 text-slate-400">{"{"}</div>
-          <div className="pl-12">
-            <span className="text-cyan-400">&quot;id&quot;</span>
-            <span className="text-slate-400">: </span>
-            <span className="text-amber-300">&quot;cntct_8f3k2j&quot;</span>
-            <span className="text-slate-400">,</span>
-          </div>
-          <div className="pl-12">
-            <span className="text-cyan-400">&quot;name&quot;</span>
-            <span className="text-slate-400">: </span>
-            <span className="text-amber-300">&quot;Sarah Chen&quot;</span>
-            <span className="text-slate-400">,</span>
-          </div>
-          <div className="pl-12">
-            <span className="text-cyan-400">&quot;email&quot;</span>
-            <span className="text-slate-400">: </span>
-            <span className="text-emerald-400">&quot;sarah@company.io&quot;</span>
-          </div>
-          <div className="pl-8 text-slate-400">{"}"}</div>
-          <div className="pl-4 text-slate-400">],</div>
-          <div className="pl-4">
-            <span className="text-cyan-400">&quot;status&quot;</span>
-            <span className="text-slate-400">: </span>
-            <span className="text-amber-300">200</span>
-          </div>
-          <div className="text-slate-400">{"}"}</div>
-        </div>
-        <div className="mt-4 pt-3 border-t border-slate-700/50 flex items-center gap-2 text-xs text-slate-500">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>Response: 23ms</span>
-          <span className="text-slate-600">|</span>
-          <span>Mock API Active</span>
-        </div>
-      </div>
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Shooting star 1 */}
+      <div className="absolute top-[20%] -left-[10%] w-[200px] h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent rotate-[35deg] animate-[shooting_3s_ease-in-out_infinite]" style={{ animationDelay: '0s' }} />
+
+      {/* Shooting star 2 */}
+      <div className="absolute top-[35%] -left-[5%] w-[150px] h-[1px] bg-gradient-to-r from-transparent via-blue-400 to-transparent rotate-[40deg] animate-[shooting_4s_ease-in-out_infinite]" style={{ animationDelay: '1.5s' }} />
+
+      {/* Shooting star 3 */}
+      <div className="absolute top-[50%] -left-[15%] w-[250px] h-[1px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent rotate-[30deg] animate-[shooting_3.5s_ease-in-out_infinite]" style={{ animationDelay: '0.8s' }} />
+
+      {/* Shooting star 4 */}
+      <div className="absolute top-[65%] -left-[8%] w-[180px] h-[1px] bg-gradient-to-r from-transparent via-blue-500 to-transparent rotate-[45deg] animate-[shooting_4.5s_ease-in-out_infinite]" style={{ animationDelay: '2.2s' }} />
+
+      {/* Shooting star 5 */}
+      <div className="absolute top-[15%] left-[30%] w-[120px] h-[1px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent rotate-[38deg] animate-[shooting_5s_ease-in-out_infinite]" style={{ animationDelay: '3s' }} />
+
+      {/* Shooting star 6 */}
+      <div className="absolute top-[80%] -left-[12%] w-[220px] h-[1px] bg-gradient-to-r from-transparent via-blue-400 to-transparent rotate-[32deg] animate-[shooting_3.8s_ease-in-out_infinite]" style={{ animationDelay: '1s' }} />
+
+      {/* Glowing orbs */}
+      <div className="absolute top-[25%] right-[20%] w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-[30%] left-[10%] w-40 h-40 bg-blue-400/10 rounded-full blur-3xl" />
+
+      <style jsx>{`
+        @keyframes shooting {
+          0% {
+            transform: translateX(0) translateY(0) rotate(35deg);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          70% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(500px) translateY(300px) rotate(35deg);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   )
 }
@@ -125,58 +109,67 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-50 text-slate-900 p-12 flex-col relative overflow-hidden">
-        {/* Logo */}
-        <div className="mb-auto">
+      <div className="hidden lg:flex lg:w-[55%] bg-white text-slate-900 relative overflow-hidden">
+        {/* Subtle gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-cyan-50/40" />
+
+        {/* Shooting stars */}
+        <ShootingStars />
+
+        {/* Content container */}
+        <div className="relative z-10 flex flex-col w-full p-10 xl:p-16">
+          {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <Logo size="md" />
             <span className="text-xl font-semibold text-slate-900">Mokra</span>
           </Link>
-        </div>
 
-        {/* Main content */}
-        <div className="space-y-8 my-auto">
-          {/* Badges */}
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-700 text-sm border border-slate-200 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Mock APIs for AI Agents
-            </span>
-          </div>
+          {/* Main content - centered */}
+          <div className="flex-1 flex items-center">
+            <div className="w-full max-w-lg">
+              {/* Badge */}
+              <div className="mb-6">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Mock APIs for AI Agents
+                </span>
+              </div>
 
-          {/* Headline */}
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight text-slate-900">
-              Start building
-              <span className="block bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
-                in minutes
-              </span>
-            </h1>
-            <p className="mt-5 text-lg text-slate-600 max-w-md leading-relaxed">
-              Create your free account and start mocking APIs instantly with AI-powered responses.
-            </p>
-          </div>
+              {/* Headline */}
+              <h1 className="text-4xl xl:text-5xl font-bold leading-[1.1] tracking-tight text-slate-900">
+                Start building
+                <span className="block bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+                  in minutes
+                </span>
+              </h1>
 
-          {/* Benefits list */}
-          <ul className="space-y-3">
-            {benefits.map((benefit) => (
-              <li key={benefit} className="flex items-center gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                  <Check className="h-4 w-4 text-emerald-600" />
+              <p className="mt-5 text-base xl:text-lg text-slate-500 max-w-md leading-relaxed">
+                Create your free account and start mocking APIs instantly with AI-powered responses.
+              </p>
+
+              {/* Benefits list */}
+              <ul className="mt-6 space-y-2.5">
+                {benefits.map((benefit) => (
+                  <li key={benefit} className="flex items-center gap-2.5">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                      <Check className="h-3 w-3 text-emerald-600" />
+                    </div>
+                    <span className="text-slate-600 text-sm">{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Y Combinator badge */}
+              <div className="mt-8 flex items-center gap-2.5">
+                <div className="flex items-center justify-center w-6 h-6 rounded bg-orange-500">
+                  <span className="text-white text-sm font-bold">Y</span>
                 </div>
-                <span className="text-slate-700">{benefit}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Code terminal */}
-          <div className="max-w-md">
-            <CodeTerminal />
+                <span className="text-slate-500 text-sm">Backed by Y Combinator</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="mt-auto pt-8">
+          {/* Footer */}
           <p className="text-sm text-slate-400">
             Trusted by developers worldwide
           </p>
