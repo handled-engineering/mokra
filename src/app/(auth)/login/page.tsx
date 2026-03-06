@@ -64,7 +64,7 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Zap className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold">MockAPI</span>
+            <span className="text-2xl font-bold">Mokra</span>
           </Link>
         </div>
 
@@ -79,7 +79,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-sm text-sidebar-foreground/50">
-          MockAPI Platform
+          Mokra
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Zap className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold">MockAPI</span>
+            <span className="text-2xl font-bold">Mokra</span>
           </div>
 
           <Card className="border-0 shadow-soft-lg">

@@ -109,7 +109,7 @@ export default function PricingPage() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Zap className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold">MockAPI</span>
+              <span className="text-xl font-bold">Mokra</span>
             </Link>
             <div className="flex items-center gap-2">
               {session ? (

@@ -49,7 +49,7 @@ export function Sidebar({ user }: SidebarProps) {
             <Zap className="h-5 w-5 text-white" />
           </div>
           {!collapsed && (
-            <span className="font-bold text-lg tracking-tight">MockAPI</span>
+            <span className="font-bold text-lg tracking-tight">Mokra</span>
           )}
         </Link>
         <button

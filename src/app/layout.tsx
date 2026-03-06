@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MockAPI Platform - Create Mock APIs Instantly",
+  title: "Mokra - Create Mock APIs Instantly",
   description: "Upload API documentation and get a fully functional mock API server with AI-powered responses",
 }
 
