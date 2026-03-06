@@ -7,7 +7,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import { Check, Zap, Sparkles, Crown } from "lucide-react"
+import { Check, Sparkles, Crown, Zap } from "lucide-react"
+import { Logo } from "@/components/ui/logo"
 import { cn } from "@/lib/utils"
 
 const plans = [
@@ -106,9 +107,7 @@ export default function PricingPage() {
         <div className="container mx-auto px-6 py-4">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                <Zap className="h-5 w-5 text-white" />
-              </div>
+              <Logo size="md" />
               <span className="text-xl font-bold">Mokra</span>
             </Link>
             <div className="flex items-center gap-2">

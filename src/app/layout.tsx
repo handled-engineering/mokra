@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Mokra - Create Mock APIs Instantly",
   description: "Upload API documentation and get a fully functional mock API server with AI-powered responses",
+  icons: {
+    icon: "/favicon.svg",
+  },
 }
 
 export default function RootLayout({

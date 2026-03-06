@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import { Zap, ArrowLeft } from "lucide-react"
+import { Logo } from "@/components/ui/logo"
+import { ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -58,9 +59,7 @@ export default function LoginPage() {
 
         <div>
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Zap className="h-6 w-6 text-white" />
-            </div>
+            <Logo size="lg" />
             <span className="text-2xl font-bold">Mokra</span>
           </Link>
         </div>
@@ -89,9 +88,7 @@ export default function LoginPage() {
           </Link>
 
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Zap className="h-6 w-6 text-white" />
-            </div>
+            <Logo size="lg" />
             <span className="text-2xl font-bold">Mokra</span>
           </div>
 

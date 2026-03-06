@@ -11,10 +11,10 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  Zap,
   Crown,
   Shield,
 } from "lucide-react"
+import { Logo } from "./logo"
 
 interface SidebarProps {
   user: {
@@ -45,9 +45,7 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-muted">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-5 w-5 text-white" />
-          </div>
+          <Logo size="md" />
           {!collapsed && (
             <span className="font-bold text-lg tracking-tight">Mokra</span>
           )}
