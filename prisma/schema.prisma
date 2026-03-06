@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PRO
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  subscription  Subscription?
+  projects      UserProject[]
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  stripeCustomerId  String?            @unique
+  stripeSubId       String?            @unique
+  plan              SubscriptionPlan   @default(FREE)
+  status            SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MockService {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String?
+  documentation String    @db.Text
+  parsedSpec    Json?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  endpoints     MockEndpoint[]
+  projects      UserProject[]
+}
+
+model MockEndpoint {
+  id             String   @id @default(cuid())
+  serviceId      String
+  method         String
+  path           String
+  description    String?
+  requestSchema  Json?
+  responseSchema Json?
+  constraints    String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  service        MockService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, method, path])
+}
+
+model UserProject {
+  id            String   @id @default(cuid())
+  userId        String
+  serviceId     String
+  name          String
+  apiKey        String   @unique
+  isActive      Boolean  @default(true)
+  customContext String?  @db.Text // Service-level custom context for response generation
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service          MockService             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  mockStates       MockState[]
+  requestLogs      RequestLog[]
+  endpointContexts ProjectEndpointContext[]
+}
+
+model ProjectEndpointContext {
+  id          String   @id @default(cuid())
+  projectId   String
+  endpointId  String
+  context     String   @db.Text // Endpoint-specific custom context
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     UserProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, endpointId])
+}
+
+model MockState {
+  id           String   @id @default(cuid())
+  projectId    String
+  endpointId   String   @default("legacy") // Track which endpoint this state belongs to
+  resourceType String
+  resourceId   String
+  data         Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project      UserProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, endpointId, resourceType, resourceId])
+  @@index([projectId, endpointId, resourceType])
+  @@index([projectId, endpointId]) // For counting records per endpoint
+}
+
+model RequestLog {
+  id         String   @id @default(cuid())
+  projectId  String
+  method     String
+  path       String
+  statusCode Int
+  request    Json?
+  response   Json?
+  duration   Int
+  createdAt  DateTime @default(now())
+
+  project    UserProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}
