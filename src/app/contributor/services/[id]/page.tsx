@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ServiceActions } from "./service-actions"
-import { EndpointList } from "./endpoint-list"
 import { ServiceDocs } from "./_components/service-docs"
 
 interface Props {
@@ -14,9 +13,6 @@ export default async function ServiceDetailPage({ params }: Props) {
   const service = await prisma.mockService.findUnique({
     where: { id: params.id },
     include: {
-      endpoints: {
-        orderBy: { path: "asc" },
-      },
       _count: {
         select: { projects: true },
       },
@@ -45,36 +41,8 @@ export default async function ServiceDetailPage({ params }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Endpoints */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Endpoints ({service.endpoints.length})</CardTitle>
-              <CardDescription>
-                All parsed API endpoints for this service
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EndpointList endpoints={service.endpoints} serviceId={service.id} />
-            </CardContent>
-          </Card>
-
           {/* File-Based Documentation */}
           <ServiceDocs serviceId={service.id} />
-
-          {/* Original Documentation */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Original Documentation</CardTitle>
-              <CardDescription>
-                The raw documentation used to generate endpoints
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-sm bg-gray-50 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap max-h-96">
-                {service.documentation}
-              </pre>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="space-y-6">
