@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ServiceActions } from "./service-actions"
 import { EndpointList } from "./endpoint-list"
+import { ServiceDocs } from "./_components/service-docs"
 
 interface Props {
   params: { id: string }
@@ -57,10 +58,16 @@ export default async function ServiceDetailPage({ params }: Props) {
             </CardContent>
           </Card>
 
-          {/* Documentation */}
+          {/* File-Based Documentation */}
+          <ServiceDocs serviceId={service.id} />
+
+          {/* Original Documentation */}
           <Card>
             <CardHeader>
               <CardTitle>Original Documentation</CardTitle>
+              <CardDescription>
+                The raw documentation used to generate endpoints
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <pre className="text-sm bg-gray-50 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap max-h-96">
