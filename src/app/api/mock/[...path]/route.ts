@@ -87,7 +87,8 @@ async function handleMockRequest(req: NextRequest, segments: string[]) {
       ...project.service,
       endpoints: mockService.endpoints as typeof project.service.endpoints,
       documentation: fileService.readme || project.service.documentation,
-      isActive: fileService.isActive,
+      // Use database isActive status (controlled via UI), not file-based
+      isActive: project.service.isActive,
     }
 
     // Build endpoint notes map from file-based endpoints
@@ -105,8 +106,10 @@ async function handleMockRequest(req: NextRequest, segments: string[]) {
     return NextResponse.json(
       {
         error: {
-          message: "This mock service is currently inactive",
-          type: "service_error",
+          message: "This service has been deactivated by Mokra. Please contact the service administrator.",
+          type: "service_unavailable",
+          code: "SERVICE_DEACTIVATED",
+          service: serviceForEngine.name,
         },
       },
       { status: 503 }
