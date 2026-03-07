@@ -125,7 +125,7 @@ async function generateGroqCompletion(
   }
 
   // Cap max_tokens at Groq's limit
-  const maxTokens = Math.min(options.maxTokens || GROQ_MAX_TOKENS, GROQ_MAX_TOKENS)
+  const maxTokens = Math.max(options.maxTokens || GROQ_MAX_TOKENS, GROQ_MAX_TOKENS)
 
   const response = await client.chat.completions.create({
     model: GROQ_MODEL,
