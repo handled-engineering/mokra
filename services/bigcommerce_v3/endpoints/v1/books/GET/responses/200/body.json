@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "The Great Gatsby",
+      "author": "F. Scott Fitzgerald",
+      "isbn": "978-0743273565",
+      "published_at": "1925-04-10",
+      "page_count": 180,
+      "created_at": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "title": "To Kill a Mockingbird",
+      "author": "Harper Lee",
+      "isbn": "978-0446310789",
+      "published_at": "1960-07-11",
+      "page_count": 281,
+      "created_at": "2024-01-14T09:20:00Z"
+    }
+  ],
+  "total": 2,
+  "limit": 10,
+  "offset": 0
+}

@@ -1,0 +1,10 @@
+{
+  "type": "offset",
+  "defaultPageSize": 5,
+  "maxPageSize": 100,
+  "offsetPattern": {
+    "offsetParam": "offset",
+    "limitParam": "limit"
+  },
+  "notes": "Use offset and limit query parameters for pagination. Response includes total count and pagination metadata."
+}

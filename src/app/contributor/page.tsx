@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
 export default async function AdminDashboard() {
-  const [servicesCount, usersCount, projectsCount, requestsCount] = await Promise.all([
+  const [servicesCount, usersCount, mockServersCount, requestsCount] = await Promise.all([
     prisma.mockService.count(),
     prisma.user.count(),
-    prisma.userProject.count(),
+    prisma.mockServer.count(),
     prisma.requestLog.count(),
   ])
 
@@ -46,11 +46,11 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-gray-600">
-              Active Projects
+              Mock Servers
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{projectsCount}</div>
+            <div className="text-3xl font-bold">{mockServersCount}</div>
           </CardContent>
         </Card>
 

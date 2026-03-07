@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { hash } from "bcryptjs"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
+import { serverAnalytics } from "@/lib/mixpanel-server"
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -39,6 +40,12 @@ export async function POST(req: Request) {
           },
         },
       },
+    })
+
+    serverAnalytics.userSignedUp(user.id, {
+      email: user.email,
+      name: user.name || undefined,
+      plan: "FREE",
     })
 
     return NextResponse.json({

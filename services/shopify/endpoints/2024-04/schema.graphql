@@ -1,0 +1,870 @@
+# Shopify Admin GraphQL API Schema (2024-01)
+# Simplified subset for mock testing
+
+scalar DateTime
+scalar Decimal
+scalar URL
+scalar JSON
+
+# ============================================================================
+# Query Root
+# ============================================================================
+
+type Query {
+  """
+  Returns the shop resource.
+  """
+  shop: Shop!
+
+  """
+  Returns a Product resource by ID.
+  """
+  product(id: ID!): Product
+
+  """
+  Returns a list of products.
+  """
+  products(
+    first: Int
+    last: Int
+    after: String
+    before: String
+    query: String
+    sortKey: ProductSortKeys
+    reverse: Boolean
+  ): ProductConnection!
+
+  """
+  Returns an Order resource by ID.
+  """
+  order(id: ID!): Order
+
+  """
+  Returns a list of orders.
+  """
+  orders(
+    first: Int
+    last: Int
+    after: String
+    before: String
+    query: String
+    sortKey: OrderSortKeys
+    reverse: Boolean
+  ): OrderConnection!
+
+  """
+  Returns a Customer resource by ID.
+  """
+  customer(id: ID!): Customer
+
+  """
+  Returns a list of customers.
+  """
+  customers(
+    first: Int
+    last: Int
+    after: String
+    before: String
+    query: String
+    sortKey: CustomerSortKeys
+    reverse: Boolean
+  ): CustomerConnection!
+
+  """
+  Returns a Collection resource by ID.
+  """
+  collection(id: ID!): Collection
+
+  """
+  Returns a list of collections.
+  """
+  collections(
+    first: Int
+    last: Int
+    after: String
+    before: String
+    query: String
+    sortKey: CollectionSortKeys
+    reverse: Boolean
+  ): CollectionConnection!
+
+  """
+  Returns an InventoryItem resource by ID.
+  """
+  inventoryItem(id: ID!): InventoryItem
+
+  """
+  Returns inventory levels for locations.
+  """
+  inventoryLevels(
+    first: Int
+    last: Int
+    after: String
+    before: String
+    query: String
+  ): InventoryLevelConnection!
+}
+
+# ============================================================================
+# Mutation Root
+# ============================================================================
+
+type Mutation {
+  """
+  Creates a product.
+  """
+  productCreate(input: ProductInput!): ProductCreatePayload
+
+  """
+  Updates a product.
+  """
+  productUpdate(input: ProductInput!): ProductUpdatePayload
+
+  """
+  Deletes a product.
+  """
+  productDelete(input: ProductDeleteInput!): ProductDeletePayload
+
+  """
+  Creates a customer.
+  """
+  customerCreate(input: CustomerInput!): CustomerCreatePayload
+
+  """
+  Updates a customer.
+  """
+  customerUpdate(input: CustomerInput!): CustomerUpdatePayload
+
+  """
+  Creates an order.
+  """
+  orderCreate(input: OrderCreateInput!): OrderCreatePayload
+
+  """
+  Updates an order.
+  """
+  orderUpdate(input: OrderInput!): OrderUpdatePayload
+
+  """
+  Marks an order as paid.
+  """
+  orderMarkAsPaid(input: OrderMarkAsPaidInput!): OrderMarkAsPaidPayload
+
+  """
+  Cancels an order.
+  """
+  orderCancel(orderId: ID!, reason: OrderCancelReason, notifyCustomer: Boolean, refund: Boolean): OrderCancelPayload
+
+  """
+  Adjusts inventory quantities.
+  """
+  inventoryAdjustQuantities(input: InventoryAdjustQuantitiesInput!): InventoryAdjustQuantitiesPayload
+
+  """
+  Creates a fulfillment.
+  """
+  fulfillmentCreate(input: FulfillmentInput!): FulfillmentCreatePayload
+}
+
+# ============================================================================
+# Shop
+# ============================================================================
+
+type Shop {
+  id: ID!
+  name: String!
+  email: String!
+  url: URL!
+  myshopifyDomain: String!
+  primaryDomain: Domain!
+  currencyCode: CurrencyCode!
+  weightUnit: WeightUnit!
+  billingAddress: MailingAddress!
+  plan: ShopPlan!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Domain {
+  host: String!
+  url: URL!
+}
+
+type ShopPlan {
+  displayName: String!
+  partnerDevelopment: Boolean!
+  shopifyPlus: Boolean!
+}
+
+# ============================================================================
+# Product
+# ============================================================================
+
+type Product {
+  id: ID!
+  title: String!
+  handle: String!
+  description: String
+  descriptionHtml: String
+  vendor: String
+  productType: String
+  status: ProductStatus!
+  tags: [String!]!
+  totalInventory: Int!
+  tracksInventory: Boolean!
+  priceRangeV2: ProductPriceRangeV2!
+  featuredImage: Image
+  images(first: Int, last: Int, after: String, before: String): ImageConnection!
+  variants(first: Int, last: Int, after: String, before: String): ProductVariantConnection!
+  options: [ProductOption!]!
+  collections(first: Int, last: Int): CollectionConnection!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  publishedAt: DateTime
+}
+
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ProductEdge {
+  cursor: String!
+  node: Product!
+}
+
+type ProductVariant {
+  id: ID!
+  title: String!
+  sku: String
+  barcode: String
+  price: Decimal!
+  compareAtPrice: Decimal
+  inventoryQuantity: Int
+  inventoryItem: InventoryItem
+  selectedOptions: [SelectedOption!]!
+  image: Image
+  weight: Float
+  weightUnit: WeightUnit
+  availableForSale: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ProductVariantConnection {
+  edges: [ProductVariantEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ProductVariantEdge {
+  cursor: String!
+  node: ProductVariant!
+}
+
+type ProductOption {
+  id: ID!
+  name: String!
+  values: [String!]!
+}
+
+type SelectedOption {
+  name: String!
+  value: String!
+}
+
+type ProductPriceRangeV2 {
+  minVariantPrice: MoneyV2!
+  maxVariantPrice: MoneyV2!
+}
+
+# ============================================================================
+# Order
+# ============================================================================
+
+type Order {
+  id: ID!
+  name: String!
+  email: String
+  phone: String
+  customer: Customer
+  billingAddress: MailingAddress
+  shippingAddress: MailingAddress
+  lineItems(first: Int, last: Int, after: String, before: String): LineItemConnection!
+  subtotalPriceSet: MoneyBag!
+  totalPriceSet: MoneyBag!
+  totalShippingPriceSet: MoneyBag!
+  totalTaxSet: MoneyBag!
+  totalDiscountsSet: MoneyBag!
+  currencyCode: CurrencyCode!
+  financialStatus: OrderFinancialStatus!
+  fulfillmentStatus: OrderFulfillmentStatus!
+  displayFulfillmentStatus: OrderDisplayFulfillmentStatus!
+  fulfillments: [Fulfillment!]!
+  note: String
+  tags: [String!]!
+  cancelledAt: DateTime
+  cancelReason: OrderCancelReason
+  closed: Boolean!
+  closedAt: DateTime
+  confirmed: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  processedAt: DateTime!
+}
+
+type OrderConnection {
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+}
+
+type OrderEdge {
+  cursor: String!
+  node: Order!
+}
+
+type LineItem {
+  id: ID!
+  title: String!
+  quantity: Int!
+  sku: String
+  variant: ProductVariant
+  originalUnitPriceSet: MoneyBag!
+  discountedUnitPriceSet: MoneyBag!
+  discountedTotalSet: MoneyBag!
+  fulfillmentStatus: String!
+}
+
+type LineItemConnection {
+  edges: [LineItemEdge!]!
+  pageInfo: PageInfo!
+}
+
+type LineItemEdge {
+  cursor: String!
+  node: LineItem!
+}
+
+type Fulfillment {
+  id: ID!
+  status: FulfillmentStatus!
+  trackingInfo: [FulfillmentTrackingInfo!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type FulfillmentTrackingInfo {
+  company: String
+  number: String
+  url: URL
+}
+
+# ============================================================================
+# Customer
+# ============================================================================
+
+type Customer {
+  id: ID!
+  firstName: String
+  lastName: String
+  displayName: String!
+  email: String
+  phone: String
+  defaultAddress: MailingAddress
+  addresses(first: Int, last: Int): MailingAddressConnection!
+  orders(first: Int, last: Int, after: String, before: String): OrderConnection!
+  ordersCount: Int!
+  totalSpent: Decimal!
+  tags: [String!]!
+  note: String
+  state: CustomerState!
+  verifiedEmail: Boolean!
+  acceptsMarketing: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type CustomerConnection {
+  edges: [CustomerEdge!]!
+  pageInfo: PageInfo!
+}
+
+type CustomerEdge {
+  cursor: String!
+  node: Customer!
+}
+
+# ============================================================================
+# Collection
+# ============================================================================
+
+type Collection {
+  id: ID!
+  title: String!
+  handle: String!
+  description: String
+  descriptionHtml: String
+  image: Image
+  products(first: Int, last: Int, after: String, before: String): ProductConnection!
+  productsCount: Int!
+  sortOrder: CollectionSortOrder!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  publishedAt: DateTime
+}
+
+type CollectionConnection {
+  edges: [CollectionEdge!]!
+  pageInfo: PageInfo!
+}
+
+type CollectionEdge {
+  cursor: String!
+  node: Collection!
+}
+
+# ============================================================================
+# Inventory
+# ============================================================================
+
+type InventoryItem {
+  id: ID!
+  sku: String
+  tracked: Boolean!
+  inventoryLevels(first: Int, last: Int): InventoryLevelConnection!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InventoryLevel {
+  id: ID!
+  available: Int!
+  location: Location!
+  inventoryItem: InventoryItem!
+  updatedAt: DateTime!
+}
+
+type InventoryLevelConnection {
+  edges: [InventoryLevelEdge!]!
+  pageInfo: PageInfo!
+}
+
+type InventoryLevelEdge {
+  cursor: String!
+  node: InventoryLevel!
+}
+
+type Location {
+  id: ID!
+  name: String!
+  address: LocationAddress!
+  isActive: Boolean!
+}
+
+type LocationAddress {
+  address1: String
+  address2: String
+  city: String
+  province: String
+  country: String
+  zip: String
+}
+
+# ============================================================================
+# Common Types
+# ============================================================================
+
+type MoneyV2 {
+  amount: Decimal!
+  currencyCode: CurrencyCode!
+}
+
+type MoneyBag {
+  shopMoney: MoneyV2!
+  presentmentMoney: MoneyV2!
+}
+
+type Image {
+  id: ID!
+  url: URL!
+  altText: String
+  width: Int
+  height: Int
+}
+
+type ImageConnection {
+  edges: [ImageEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ImageEdge {
+  cursor: String!
+  node: Image!
+}
+
+type MailingAddress {
+  id: ID!
+  firstName: String
+  lastName: String
+  company: String
+  address1: String
+  address2: String
+  city: String
+  province: String
+  provinceCode: String
+  country: String
+  countryCodeV2: CountryCode
+  zip: String
+  phone: String
+}
+
+type MailingAddressConnection {
+  edges: [MailingAddressEdge!]!
+  pageInfo: PageInfo!
+}
+
+type MailingAddressEdge {
+  cursor: String!
+  node: MailingAddress!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type UserError {
+  field: [String!]
+  message: String!
+}
+
+# ============================================================================
+# Enums
+# ============================================================================
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+  DRAFT
+}
+
+enum ProductSortKeys {
+  TITLE
+  PRODUCT_TYPE
+  VENDOR
+  INVENTORY_TOTAL
+  UPDATED_AT
+  CREATED_AT
+  PUBLISHED_AT
+  ID
+  RELEVANCE
+}
+
+enum OrderSortKeys {
+  PROCESSED_AT
+  TOTAL_PRICE
+  ID
+  CREATED_AT
+  UPDATED_AT
+  CUSTOMER_NAME
+  FINANCIAL_STATUS
+  FULFILLMENT_STATUS
+  ORDER_NUMBER
+  RELEVANCE
+}
+
+enum CustomerSortKeys {
+  NAME
+  LOCATION
+  ORDERS_COUNT
+  LAST_ORDER_DATE
+  TOTAL_SPENT
+  UPDATED_AT
+  CREATED_AT
+  ID
+  RELEVANCE
+}
+
+enum CollectionSortKeys {
+  TITLE
+  UPDATED_AT
+  ID
+  RELEVANCE
+}
+
+enum OrderFinancialStatus {
+  PENDING
+  AUTHORIZED
+  PARTIALLY_PAID
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  VOIDED
+}
+
+enum OrderFulfillmentStatus {
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  RESTOCKED
+}
+
+enum OrderDisplayFulfillmentStatus {
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  RESTOCKED
+  PENDING_FULFILLMENT
+  OPEN
+  IN_PROGRESS
+  ON_HOLD
+  SCHEDULED
+}
+
+enum OrderCancelReason {
+  CUSTOMER
+  FRAUD
+  INVENTORY
+  DECLINED
+  OTHER
+}
+
+enum FulfillmentStatus {
+  PENDING
+  OPEN
+  SUCCESS
+  CANCELLED
+  ERROR
+  FAILURE
+}
+
+enum CustomerState {
+  DISABLED
+  INVITED
+  ENABLED
+  DECLINED
+}
+
+enum CollectionSortOrder {
+  ALPHA_ASC
+  ALPHA_DESC
+  BEST_SELLING
+  CREATED
+  CREATED_DESC
+  MANUAL
+  PRICE_ASC
+  PRICE_DESC
+}
+
+enum CurrencyCode {
+  USD
+  EUR
+  GBP
+  CAD
+  AUD
+  JPY
+  INR
+  CNY
+  BRL
+  MXN
+}
+
+enum CountryCode {
+  US
+  CA
+  GB
+  DE
+  FR
+  AU
+  JP
+  IN
+  CN
+  BR
+  MX
+}
+
+enum WeightUnit {
+  KILOGRAMS
+  GRAMS
+  POUNDS
+  OUNCES
+}
+
+# ============================================================================
+# Input Types
+# ============================================================================
+
+input ProductInput {
+  id: ID
+  title: String
+  handle: String
+  descriptionHtml: String
+  vendor: String
+  productType: String
+  tags: [String!]
+  status: ProductStatus
+  variants: [ProductVariantInput!]
+  options: [String!]
+}
+
+input ProductVariantInput {
+  id: ID
+  title: String
+  sku: String
+  barcode: String
+  price: Decimal
+  compareAtPrice: Decimal
+  options: [String!]
+  inventoryQuantities: [InventoryQuantityInput!]
+}
+
+input InventoryQuantityInput {
+  locationId: ID!
+  availableQuantity: Int!
+}
+
+input ProductDeleteInput {
+  id: ID!
+}
+
+input CustomerInput {
+  id: ID
+  firstName: String
+  lastName: String
+  email: String
+  phone: String
+  addresses: [MailingAddressInput!]
+  note: String
+  tags: [String!]
+  acceptsMarketing: Boolean
+}
+
+input MailingAddressInput {
+  firstName: String
+  lastName: String
+  company: String
+  address1: String
+  address2: String
+  city: String
+  province: String
+  country: String
+  zip: String
+  phone: String
+}
+
+input OrderCreateInput {
+  email: String
+  phone: String
+  customerId: ID
+  billingAddress: MailingAddressInput
+  shippingAddress: MailingAddressInput
+  lineItems: [OrderLineItemInput!]!
+  note: String
+  tags: [String!]
+}
+
+input OrderLineItemInput {
+  variantId: ID!
+  quantity: Int!
+}
+
+input OrderInput {
+  id: ID!
+  email: String
+  note: String
+  tags: [String!]
+  shippingAddress: MailingAddressInput
+}
+
+input OrderMarkAsPaidInput {
+  id: ID!
+}
+
+input InventoryAdjustQuantitiesInput {
+  changes: [InventoryChangeInput!]!
+  reason: String
+}
+
+input InventoryChangeInput {
+  inventoryItemId: ID!
+  locationId: ID!
+  delta: Int!
+}
+
+input FulfillmentInput {
+  orderId: ID!
+  lineItems: [FulfillmentLineItemInput!]!
+  trackingInfo: FulfillmentTrackingInput
+  notifyCustomer: Boolean
+}
+
+input FulfillmentLineItemInput {
+  id: ID!
+  quantity: Int!
+}
+
+input FulfillmentTrackingInput {
+  company: String
+  number: String
+  url: URL
+}
+
+# ============================================================================
+# Payload Types
+# ============================================================================
+
+type ProductCreatePayload {
+  product: Product
+  userErrors: [UserError!]!
+}
+
+type ProductUpdatePayload {
+  product: Product
+  userErrors: [UserError!]!
+}
+
+type ProductDeletePayload {
+  deletedProductId: ID
+  userErrors: [UserError!]!
+}
+
+type CustomerCreatePayload {
+  customer: Customer
+  userErrors: [UserError!]!
+}
+
+type CustomerUpdatePayload {
+  customer: Customer
+  userErrors: [UserError!]!
+}
+
+type OrderCreatePayload {
+  order: Order
+  userErrors: [UserError!]!
+}
+
+type OrderUpdatePayload {
+  order: Order
+  userErrors: [UserError!]!
+}
+
+type OrderMarkAsPaidPayload {
+  order: Order
+  userErrors: [UserError!]!
+}
+
+type OrderCancelPayload {
+  order: Order
+  userErrors: [UserError!]!
+}
+
+type InventoryAdjustQuantitiesPayload {
+  inventoryLevels: [InventoryLevel!]
+  userErrors: [UserError!]!
+}
+
+type FulfillmentCreatePayload {
+  fulfillment: Fulfillment
+  userErrors: [UserError!]!
+}

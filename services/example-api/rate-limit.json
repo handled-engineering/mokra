@@ -1,0 +1,13 @@
+{
+  "type": "fixed-window",
+  "fixedWindow": {
+    "requestsPerWindow": 100,
+    "windowSizeSeconds": 60
+  },
+  "headers": {
+    "limit": "X-RateLimit-Limit",
+    "remaining": "X-RateLimit-Remaining",
+    "reset": "X-RateLimit-Reset"
+  },
+  "notes": "Standard fixed-window rate limiting. 100 requests per minute per API key."
+}

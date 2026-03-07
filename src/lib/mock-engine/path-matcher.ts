@@ -1,4 +1,13 @@
-import { MockEndpoint } from "@prisma/client"
+// Endpoint interface (loaded from filesystem, not database)
+interface MockEndpoint {
+  id: string
+  method: string
+  path: string
+  description?: string | null
+  requestSchema?: Record<string, unknown> | null
+  responseSchema?: Record<string, unknown> | null
+  constraints?: string | null
+}
 
 interface MatchResult {
   endpoint: MockEndpoint

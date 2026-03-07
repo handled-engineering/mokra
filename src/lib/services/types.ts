@@ -11,6 +11,7 @@ export interface ServiceConfig {
   slug: string
   description?: string
   version: string
+  type?: "rest" | "graphql" // Defaults to "rest"
   baseUrl?: string
   documentationUrl?: string
   defaultHeaders?: Record<string, string>
@@ -26,12 +27,104 @@ export interface ServiceConfig {
     requestsPerMinute?: number
     burstLimit?: number
   }
+  // GraphQL-specific configuration
+  graphql?: {
+    versionHeader?: string // Header to determine version (default: "X-API-Version")
+    versionPath?: boolean // If true, version is in the path (e.g., /v1/graphql)
+    defaultVersion?: string // Default version if not specified
+  }
   isActive: boolean
 }
 
 export interface LoadedService extends ServiceConfig {
   endpoints: LoadedEndpoint[]
+  graphqlSchemas?: GraphQLSchemaVersion[] // For GraphQL services
+  paginationConfig?: PaginationConfig // Pagination rules from pagination.json
+  rateLimitConfig?: RateLimitConfig // Rate limit rules from rate-limit.json
   readme?: string
+}
+
+// ============================================================================
+// Pagination Config Types
+// ============================================================================
+
+export interface PaginationConfig {
+  type: "cursor" | "offset" | "page"
+  defaultPageSize: number
+  maxPageSize: number
+  cursorField?: string // For cursor-based pagination
+  connectionPattern?: {
+    edgesField: string
+    nodeField: string
+    pageInfoField: string
+    pageInfoFields: {
+      hasNextPage: string
+      hasPreviousPage: string
+      startCursor?: string
+      endCursor?: string
+      totalCount?: string
+    }
+  }
+  offsetPattern?: {
+    offsetParam: string
+    limitParam: string
+  }
+  pagePattern?: {
+    pageParam: string
+    perPageParam: string
+  }
+  notes?: string
+}
+
+// ============================================================================
+// Rate Limit Config Types
+// ============================================================================
+
+export interface RateLimitConfig {
+  type: "fixed-window" | "sliding-window" | "leaky-bucket" | "token-bucket"
+  costBased?: boolean
+  bucket?: {
+    maxCapacity: number
+    restoreRate: number
+    restoreRateUnit: "per_second" | "per_minute" | "per_hour"
+  }
+  fixedWindow?: {
+    requestsPerWindow: number
+    windowSizeSeconds: number
+  }
+  queryCosts?: {
+    default: number
+    mutations?: number
+    connections?: {
+      base: number
+      perItem: number
+    }
+  }
+  headers?: {
+    limit?: string
+    remaining?: string
+    reset?: string
+    available?: string
+    format?: string
+  }
+  notes?: string
+}
+
+// ============================================================================
+// GraphQL Types
+// ============================================================================
+
+export interface GraphQLSchemaVersion {
+  version: string // e.g., "v1", "2024-01-15"
+  schema: string // Raw GraphQL schema string
+  schemaPath: string // Path to schema file
+}
+
+export interface GraphQLOperation {
+  type: "query" | "mutation" | "subscription"
+  name: string
+  variables?: Record<string, unknown>
+  selectionSet: string[] // Fields being requested
 }
 
 // ============================================================================
@@ -70,6 +163,7 @@ export interface LoadedEndpoint extends EndpointConfig {
   requestSchema?: Record<string, unknown>
   responses: Record<number, ResponseDefinition>
   notes?: string
+  graphqlSchema?: string // For GraphQL endpoints
 }
 
 // ============================================================================

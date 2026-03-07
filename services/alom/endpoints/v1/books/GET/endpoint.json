@@ -1,0 +1,21 @@
+{
+  "path": "/v1/books",
+  "method": "GET",
+  "description": "Retrieve a list of all books",
+  "summary": "List books",
+  "tags": ["books"],
+  "queryParameters": {
+    "limit": {
+      "type": "integer",
+      "description": "Maximum number of books to return",
+      "default": 10
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Number of books to skip",
+      "default": 0
+    }
+  },
+  "constraints": "Returns paginated results. Max limit is 100.",
+  "defaultStatusCode": 200
+}

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import Anthropic from "@anthropic-ai/sdk"
 import { z } from "zod"
+import { serverAnalytics } from "@/lib/mixpanel-server"
 
 const generateSchema = z.object({
   type: z.enum(["schema", "response"]),
@@ -137,6 +138,14 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`,
       }
 
       const schema = JSON.parse(cleanJsonResponse(content.text))
+
+      // Track AI generation
+      serverAnalytics.aiGenerationUsed(session.user.id, {
+        serviceId: "contributor",
+        generationType: "schema",
+        tokensUsed: response.usage?.input_tokens + response.usage?.output_tokens,
+      }, session.user.email)
+
       return NextResponse.json({ schema })
     } else {
       // Generate sample response with headers
@@ -187,6 +196,13 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`,
       }
 
       const parsed = JSON.parse(cleanJsonResponse(content.text))
+
+      // Track AI generation
+      serverAnalytics.aiGenerationUsed(session.user.id, {
+        serviceId: "contributor",
+        generationType: "response",
+        tokensUsed: response.usage?.input_tokens + response.usage?.output_tokens,
+      }, session.user.email)
 
       // Handle both old format (just body) and new format (headers + body)
       if (parsed.headers !== undefined && parsed.body !== undefined) {

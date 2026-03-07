@@ -1,0 +1,208 @@
+scalar DateTime
+scalar Decimal
+scalar URL
+
+type Query {
+  product(id: ID!): Product
+  products(
+    first: Int
+    last: Int
+    after: String
+    before: String
+    query: String
+    sortKey: ProductSortKeys
+    reverse: Boolean
+  ): ProductConnection!
+}
+
+type Mutation {
+  productCreate(input: ProductInput!): ProductCreatePayload
+  productUpdate(input: ProductInput!): ProductUpdatePayload
+  productDelete(input: ProductDeleteInput!): ProductDeletePayload
+}
+
+type Product {
+  id: ID!
+  title: String!
+  handle: String!
+  description: String
+  descriptionHtml: String
+  vendor: String
+  productType: String
+  status: ProductStatus!
+  tags: [String!]!
+  totalInventory: Int!
+  tracksInventory: Boolean!
+  priceRangeV2: ProductPriceRangeV2!
+  featuredImage: Image
+  images(first: Int, last: Int, after: String, before: String): ImageConnection!
+  variants(first: Int, last: Int, after: String, before: String): ProductVariantConnection!
+  options: [ProductOption!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  publishedAt: DateTime
+}
+
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ProductEdge {
+  cursor: String!
+  node: Product!
+}
+
+type ProductVariant {
+  id: ID!
+  title: String!
+  sku: String
+  barcode: String
+  price: Decimal!
+  compareAtPrice: Decimal
+  inventoryQuantity: Int
+  selectedOptions: [SelectedOption!]!
+  image: Image
+  weight: Float
+  weightUnit: WeightUnit
+  availableForSale: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ProductVariantConnection {
+  edges: [ProductVariantEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ProductVariantEdge {
+  cursor: String!
+  node: ProductVariant!
+}
+
+type ProductOption {
+  id: ID!
+  name: String!
+  values: [String!]!
+}
+
+type SelectedOption {
+  name: String!
+  value: String!
+}
+
+type ProductPriceRangeV2 {
+  minVariantPrice: MoneyV2!
+  maxVariantPrice: MoneyV2!
+}
+
+type MoneyV2 {
+  amount: Decimal!
+  currencyCode: CurrencyCode!
+}
+
+type Image {
+  id: ID!
+  url: URL!
+  altText: String
+  width: Int
+  height: Int
+}
+
+type ImageConnection {
+  edges: [ImageEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ImageEdge {
+  cursor: String!
+  node: Image!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type UserError {
+  field: [String!]
+  message: String!
+}
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+  DRAFT
+}
+
+enum ProductSortKeys {
+  TITLE
+  PRODUCT_TYPE
+  VENDOR
+  INVENTORY_TOTAL
+  UPDATED_AT
+  CREATED_AT
+  PUBLISHED_AT
+  ID
+  RELEVANCE
+}
+
+enum CurrencyCode {
+  USD
+  EUR
+  GBP
+  CAD
+  AUD
+  JPY
+}
+
+enum WeightUnit {
+  KILOGRAMS
+  GRAMS
+  POUNDS
+  OUNCES
+}
+
+input ProductInput {
+  id: ID
+  title: String
+  handle: String
+  descriptionHtml: String
+  vendor: String
+  productType: String
+  tags: [String!]
+  status: ProductStatus
+  variants: [ProductVariantInput!]
+  options: [String!]
+}
+
+input ProductVariantInput {
+  id: ID
+  title: String
+  sku: String
+  barcode: String
+  price: Decimal
+  compareAtPrice: Decimal
+  options: [String!]
+}
+
+input ProductDeleteInput {
+  id: ID!
+}
+
+type ProductCreatePayload {
+  product: Product
+  userErrors: [UserError!]!
+}
+
+type ProductUpdatePayload {
+  product: Product
+  userErrors: [UserError!]!
+}
+
+type ProductDeletePayload {
+  deletedProductId: ID
+  userErrors: [UserError!]!
+}

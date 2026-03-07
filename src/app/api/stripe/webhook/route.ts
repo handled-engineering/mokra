@@ -3,6 +3,7 @@ import { headers } from "next/headers"
 import { stripe } from "@/lib/stripe"
 import { prisma } from "@/lib/prisma"
 import Stripe from "stripe"
+import { serverAnalytics } from "@/lib/mixpanel-server"
 
 export async function POST(req: Request) {
   const body = await req.text()
@@ -29,6 +30,13 @@ export async function POST(req: Request) {
         const plan = session.metadata?.plan as "BASIC" | "PRO"
 
         if (userId && plan) {
+          // Get user's previous plan
+          const existingSub = await prisma.subscription.findUnique({
+            where: { userId },
+            include: { user: true },
+          })
+          const previousPlan = existingSub?.plan || "FREE"
+
           await prisma.subscription.update({
             where: { userId },
             data: {
@@ -37,6 +45,21 @@ export async function POST(req: Request) {
               status: "ACTIVE",
             },
           })
+
+          // Track subscription created
+          serverAnalytics.subscriptionCreated(userId, {
+            plan,
+            stripeSubscriptionId: session.subscription as string,
+          }, existingSub?.user?.email)
+
+          // If upgrading from existing plan, also track as upgrade
+          if (previousPlan !== "FREE" && previousPlan !== plan) {
+            serverAnalytics.subscriptionUpdated(userId, {
+              fromPlan: previousPlan,
+              toPlan: plan,
+              stripeSubscriptionId: session.subscription as string,
+            }, existingSub?.user?.email)
+          }
         }
         break
       }
@@ -71,9 +94,12 @@ export async function POST(req: Request) {
 
         const dbSubscription = await prisma.subscription.findFirst({
           where: { stripeCustomerId: customerId },
+          include: { user: true },
         })
 
         if (dbSubscription) {
+          const previousPlan = dbSubscription.plan
+
           await prisma.subscription.update({
             where: { id: dbSubscription.id },
             data: {
@@ -82,6 +108,12 @@ export async function POST(req: Request) {
               stripeSubId: null,
             },
           })
+
+          // Track subscription canceled
+          serverAnalytics.subscriptionCanceled(dbSubscription.userId, {
+            plan: previousPlan,
+            stripeSubscriptionId: subscription.id,
+          }, dbSubscription.user?.email)
         }
         break
       }

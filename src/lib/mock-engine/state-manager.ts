@@ -7,19 +7,17 @@ export interface StateEntry {
   resourceType: string
   resourceId: string
   data: Record<string, unknown>
-  endpointId?: string
 }
 
 export class StateManager {
-  private projectId: string
+  private mockServerId: string
 
-  constructor(projectId: string) {
-    this.projectId = projectId
+  constructor(mockServerId: string) {
+    this.mockServerId = mockServerId
   }
 
   /**
    * Get a resource by type and ID.
-   * Does NOT filter by endpointId - allows GET to find records created by POST.
    */
   async getResource(
     resourceType: string,
@@ -27,7 +25,7 @@ export class StateManager {
   ): Promise<Record<string, unknown> | null> {
     const state = await prisma.mockState.findFirst({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         resourceType,
         resourceId,
       },
@@ -37,7 +35,7 @@ export class StateManager {
   }
 
   /**
-   * Get a resource with its full state entry including endpointId.
+   * Get a resource with its full state entry.
    */
   async getResourceEntry(
     resourceType: string,
@@ -45,7 +43,7 @@ export class StateManager {
   ): Promise<StateEntry | null> {
     const state = await prisma.mockState.findFirst({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         resourceType,
         resourceId,
       },
@@ -57,7 +55,6 @@ export class StateManager {
       resourceType: state.resourceType,
       resourceId: state.resourceId,
       data: state.data as Record<string, unknown>,
-      endpointId: state.endpointId,
     }
   }
 
@@ -67,7 +64,7 @@ export class StateManager {
   async listResources(resourceType: string): Promise<StateEntry[]> {
     const states = await prisma.mockState.findMany({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         resourceType,
       },
       orderBy: { createdAt: "desc" },
@@ -78,7 +75,6 @@ export class StateManager {
       resourceType: s.resourceType,
       resourceId: s.resourceId,
       data: s.data as Record<string, unknown>,
-      endpointId: s.endpointId,
     }))
   }
 
@@ -88,7 +84,7 @@ export class StateManager {
   async getRecordCount(resourceType: string): Promise<number> {
     return prisma.mockState.count({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         resourceType,
       },
     })
@@ -108,8 +104,7 @@ export class StateManager {
   async createResource(
     resourceType: string,
     resourceId: string,
-    data: Record<string, unknown>,
-    endpointId: string
+    data: Record<string, unknown>
   ): Promise<StateEntry | null> {
     // Check record limit per resource type
     const canCreate = await this.canCreateRecord(resourceType)
@@ -121,13 +116,12 @@ export class StateManager {
     const existing = await this.getResource(resourceType, resourceId)
     if (existing) {
       // Update instead of create
-      return this.updateResource(resourceType, resourceId, data, endpointId)
+      return this.updateResource(resourceType, resourceId, data)
     }
 
     const state = await prisma.mockState.create({
       data: {
-        projectId: this.projectId,
-        endpointId,
+        mockServerId: this.mockServerId,
         resourceType,
         resourceId,
         data: data as Prisma.InputJsonValue,
@@ -138,24 +132,21 @@ export class StateManager {
       resourceType: state.resourceType,
       resourceId: state.resourceId,
       data: state.data as Record<string, unknown>,
-      endpointId: state.endpointId,
     }
   }
 
   /**
    * Update an existing resource.
-   * Finds by resourceType + resourceId regardless of which endpoint created it.
    */
   async updateResource(
     resourceType: string,
     resourceId: string,
-    data: Record<string, unknown>,
-    endpointId?: string
+    data: Record<string, unknown>
   ): Promise<StateEntry | null> {
     // Find the existing record
     const existingState = await prisma.mockState.findFirst({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         resourceType,
         resourceId,
       },
@@ -170,8 +161,6 @@ export class StateManager {
       where: { id: existingState.id },
       data: {
         data: merged as Prisma.InputJsonValue,
-        // Optionally update endpointId to track which endpoint last modified it
-        ...(endpointId && { endpointId }),
       },
     })
 
@@ -179,7 +168,6 @@ export class StateManager {
       resourceType: state.resourceType,
       resourceId: state.resourceId,
       data: state.data as Record<string, unknown>,
-      endpointId: state.endpointId,
     }
   }
 
@@ -189,21 +177,19 @@ export class StateManager {
   async upsertResource(
     resourceType: string,
     resourceId: string,
-    data: Record<string, unknown>,
-    endpointId: string
+    data: Record<string, unknown>
   ): Promise<StateEntry | null> {
     const existing = await this.getResource(resourceType, resourceId)
 
     if (existing) {
-      return this.updateResource(resourceType, resourceId, data, endpointId)
+      return this.updateResource(resourceType, resourceId, data)
     } else {
-      return this.createResource(resourceType, resourceId, data, endpointId)
+      return this.createResource(resourceType, resourceId, data)
     }
   }
 
   /**
    * Delete a resource.
-   * Finds by resourceType + resourceId regardless of which endpoint created it.
    */
   async deleteResource(
     resourceType: string,
@@ -211,7 +197,7 @@ export class StateManager {
   ): Promise<boolean> {
     const existingState = await prisma.mockState.findFirst({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         resourceType,
         resourceId,
       },
@@ -227,12 +213,12 @@ export class StateManager {
   }
 
   /**
-   * Get all state for the project.
+   * Get all state for the mock server.
    */
   async getAllState(): Promise<StateEntry[]> {
     const states = await prisma.mockState.findMany({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
       },
       orderBy: { updatedAt: "desc" },
     })
@@ -241,7 +227,6 @@ export class StateManager {
       resourceType: s.resourceType,
       resourceId: s.resourceId,
       data: s.data as Record<string, unknown>,
-      endpointId: s.endpointId,
     }))
   }
 
@@ -251,7 +236,7 @@ export class StateManager {
   async getStateForResourceType(resourceType: string): Promise<StateEntry[]> {
     const states = await prisma.mockState.findMany({
       where: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         resourceType,
       },
       orderBy: { updatedAt: "desc" },
@@ -262,7 +247,6 @@ export class StateManager {
       resourceType: s.resourceType,
       resourceId: s.resourceId,
       data: s.data as Record<string, unknown>,
-      endpointId: s.endpointId,
     }))
   }
 }

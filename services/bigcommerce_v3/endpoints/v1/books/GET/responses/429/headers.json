@@ -1,0 +1,7 @@
+{
+  "Content-Type": "application/json",
+  "X-RateLimit-Limit": "60",
+  "X-RateLimit-Remaining": "0",
+  "X-RateLimit-Reset": "1709726400",
+  "Retry-After": "45"
+}

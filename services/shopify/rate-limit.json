@@ -1,0 +1,22 @@
+{
+  "type": "leaky-bucket",
+  "costBased": true,
+  "bucket": {
+    "maxCapacity": 1000,
+    "restoreRate": 50,
+    "restoreRateUnit": "per_second"
+  },
+  "queryCosts": {
+    "default": 1,
+    "mutations": 10,
+    "connections": {
+      "base": 1,
+      "perItem": 1
+    }
+  },
+  "headers": {
+    "available": "X-Shopify-Shop-Api-Call-Limit",
+    "format": "{used}/{max}"
+  },
+  "notes": "Shopify uses a leaky bucket algorithm with cost-based limiting. Complex queries cost more."
+}

@@ -1,21 +1,49 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { Layers, Code2, Loader2, Check, ArrowRight, AlertCircle, Sparkles } from "lucide-react"
+import { Divider } from "@/components/ui/divider"
+import { Heading } from "@/components/ui/heading"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/Shadcn/dialog"
+import {
+  Layers,
+  Code2,
+  Loader2,
+  ArrowRight,
+  SearchIcon,
+  Plus,
+  Tag,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
+import { analytics } from "@/lib/mixpanel"
+
+interface Category {
+  id: string
+  name: string
+  description?: string
+}
 
 interface MockService {
   id: string
   name: string
   slug: string
   description: string | null
+  logoUrl: string | null
+  category: string | null
+  type: "rest" | "graphql"
   _count: {
     endpoints: number
   }
@@ -23,58 +51,124 @@ interface MockService {
 
 export default function ServicesPage() {
   const [services, setServices] = useState<MockService[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
-  const [projectName, setProjectName] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("")
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedService, setSelectedService] = useState<MockService | null>(null)
+  const [serverName, setServerName] = useState("")
   const [creating, setCreating] = useState(false)
-  const [limitReached, setLimitReached] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
-    fetch("/api/services")
-      .then((res) => res.json())
-      .then((data) => {
-        setServices(data.services || [])
+    Promise.all([
+      fetch("/api/services").then((res) => res.json()),
+      fetch("/api/categories").then((res) => res.json()),
+    ])
+      .then(([servicesData, categoriesData]) => {
+        setServices(servicesData.services || [])
+        setCategories(categoriesData.categories || [])
         setLoading(false)
+
+        // Track service list viewed
+        analytics.serviceListViewed()
       })
       .catch(() => {
         setLoading(false)
       })
   }, [])
 
-  const createProject = async () => {
-    if (!selectedService || !projectName) return
+  const filteredServices = useMemo(() => {
+    let filtered = services
+
+    // Filter by category
+    if (selectedCategory) {
+      filtered = filtered.filter((s) => s.category === selectedCategory)
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (s) =>
+          s.name.toLowerCase().includes(searchLower) ||
+          s.slug.toLowerCase().includes(searchLower) ||
+          s.description?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    return filtered
+  }, [services, searchTerm, selectedCategory])
+
+  // Track search with debounce
+  useEffect(() => {
+    if (searchTerm) {
+      const timer = setTimeout(() => {
+        analytics.serviceSearched({
+          searchTerm,
+          resultsCount: filteredServices.length,
+        })
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [searchTerm, filteredServices.length])
+
+  // Track category filter
+  useEffect(() => {
+    if (selectedCategory) {
+      analytics.serviceCategoryFiltered({ category: selectedCategory })
+    }
+  }, [selectedCategory])
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return null
+    const category = categories.find((c) => c.id === categoryId)
+    return category?.name ?? categoryId
+  }
+
+  const openCreateDialog = (service: MockService) => {
+    setSelectedService(service)
+    setServerName("")
+    setDialogOpen(true)
+
+    // Track service viewed when opening create dialog
+    analytics.serviceViewed({
+      serviceSlug: service.slug,
+      serviceName: service.name,
+      serviceType: service.type,
+    })
+  }
+
+  const createMockServer = async () => {
+    if (!selectedService || !serverName) return
 
     setCreating(true)
     try {
-      const res = await fetch("/api/projects", {
+      const res = await fetch("/api/mock-servers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          serviceId: selectedService,
-          name: projectName,
+          serviceId: selectedService.id,
+          name: serverName,
         }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create project")
+        throw new Error(data.error || "Failed to create mock server")
       }
 
       toast({
         title: "Success",
-        description: "Project created! Your API key is ready.",
+        description: "Mock server created! Your API key is ready.",
       })
-      router.push(`/dashboard/projects/${data.project.id}`)
+      setDialogOpen(false)
+      router.push(`/dashboard/mock-servers/${data.mockServer.id}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Something went wrong"
-
-      if (errorMessage.toLowerCase().includes("limit")) {
-        setLimitReached(true)
-      }
-
       toast({
         title: "Error",
         description: errorMessage,
@@ -84,8 +178,6 @@ export default function ServicesPage() {
       setCreating(false)
     }
   }
-
-  const selectedServiceData = services.find(s => s.id === selectedService)
 
   if (loading) {
     return (
@@ -97,160 +189,191 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Available Services</h1>
-        <p className="text-muted-foreground mt-1">
-          Select a mock service to create a new project
-        </p>
-      </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col">
+          <Heading>Available Services</Heading>
+          <span className="text-sm text-gray-500">
+            {filteredServices.length} service{filteredServices.length !== 1 ? "s" : ""} available
+          </span>
+        </div>
 
-      {services.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-6">
-              <Layers className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">No services available</h3>
-            <p className="text-muted-foreground">
-              Check back later for available mock services.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Service Selection */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {services.map((service) => {
-                const isSelected = selectedService === service.id
-                return (
-                  <Card
-                    key={service.id}
-                    className={cn(
-                      "cursor-pointer transition-all duration-200 group",
-                      isSelected
-                        ? "ring-2 ring-primary border-primary shadow-glow"
-                        : "hover:border-primary/50 hover:shadow-soft"
-                    )}
-                    onClick={() => setSelectedService(service.id)}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "flex h-11 w-11 items-center justify-center rounded-xl transition-colors",
-                            isSelected
-                              ? "bg-primary text-white"
-                              : "bg-primary/10 text-primary group-hover:bg-primary/20"
-                          )}>
-                            <Layers className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">{service.name}</CardTitle>
-                            <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              /{service.slug}
-                            </code>
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
-                            <Check className="h-4 w-4" />
-                          </div>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {service.description || "No description available"}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Code2 className="h-3.5 w-3.5" />
-                        <span>{service._count.endpoints} endpoints</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Create Project Panel */}
-          <div>
-            <Card className="sticky top-8">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Create Project</CardTitle>
-                    <CardDescription>
-                      {selectedServiceData ? `Using ${selectedServiceData.name}` : "Select a service first"}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {limitReached ? (
-                  <div className="text-center py-6 space-y-4">
-                    <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
-                      <AlertCircle className="h-7 w-7 text-destructive" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-destructive">
-                        Project limit reached
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Upgrade your plan to create more projects.
-                      </p>
-                    </div>
-                    <Button asChild className="w-full" variant="gradient">
-                      <Link href="/pricing">
-                        Upgrade Plan
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                ) : selectedService ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="projectName">Project Name</Label>
-                      <Input
-                        id="projectName"
-                        placeholder="My Test Project"
-                        value={projectName}
-                        onChange={(e) => setProjectName(e.target.value)}
-                        className="h-11"
-                      />
-                    </div>
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={createProject}
-                      disabled={!projectName || creating}
-                      loading={creating}
-                    >
-                      Create Project
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
-                      <Layers className="h-7 w-7 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Select a service from the left to get started
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm transition-all
+              duration-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none
+              focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search services..."
+              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm transition-all
+                duration-200 placeholder:text-gray-400 hover:border-gray-300 focus:border-blue-500
+                focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:w-[250px]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
+      </div>
+
+      <Divider className="my-6" />
+
+      {services.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+          <Layers className="mb-4 size-12 text-gray-300" />
+          <p className="text-lg">No services available</p>
+          <p className="text-sm">Check back later for available mock services.</p>
+        </div>
+      ) : filteredServices.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+          <SearchIcon className="mb-4 size-12 text-gray-300" />
+          <p className="text-lg">No services found</p>
+          <p className="text-sm">Try adjusting your search term.</p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          {filteredServices.map((service, index) => (
+            <div
+              key={service.id}
+              className={cn(
+                "flex w-full items-center gap-4 px-4 py-3 transition-colors hover:bg-gray-50",
+                index !== filteredServices.length - 1 && "border-b border-gray-100"
+              )}
+            >
+              <div className="flex shrink-0 items-center gap-3">
+                <div className="flex size-10 items-center justify-center overflow-hidden rounded-lg">
+                  {service.logoUrl ? (
+                    <Image
+                      src={service.logoUrl}
+                      alt={service.name}
+                      width={40}
+                      height={40}
+                      className="size-10 object-contain"
+                    />
+                  ) : (
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-blue-100">
+                      <Layers className="size-5 text-blue-600" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate font-medium text-gray-900">{service.name}</p>
+                  <code className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
+                    /{service.slug}
+                  </code>
+                </div>
+                <p className="mt-0.5 truncate text-sm text-gray-500">
+                  {service.description || "No description available"}
+                </p>
+                <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <Code2 className="size-3" />
+                    {service._count.endpoints} endpoint{service._count.endpoints !== 1 ? "s" : ""}
+                  </span>
+                  {service.category && (
+                    <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-blue-600">
+                      <Tag className="size-3" />
+                      {getCategoryName(service.category)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href={`/dashboard/services/${service.slug}`}
+                  className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                >
+                  View Docs
+                </Link>
+                <Button
+                  size="sm"
+                  onClick={() => openCreateDialog(service)}
+                >
+                  <Plus className="size-4" />
+                  Create Mock Server
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
+
+      {/* Create Mock Server Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              {selectedService?.logoUrl ? (
+                <Image
+                  src={selectedService.logoUrl}
+                  alt={selectedService.name}
+                  width={40}
+                  height={40}
+                  className="size-10 object-contain"
+                />
+              ) : (
+                <div className="flex size-10 items-center justify-center rounded-lg bg-blue-100">
+                  <Layers className="size-5 text-blue-600" />
+                </div>
+              )}
+              <div>
+                <DialogTitle>Create Mock Server</DialogTitle>
+                <DialogDescription>
+                  {selectedService?.name}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="serverName">Mock Server Name</Label>
+              <Input
+                id="serverName"
+                placeholder="My Test Server"
+                value={serverName}
+                onChange={(e) => setServerName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && serverName && !creating) {
+                    createMockServer()
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={creating}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createMockServer}
+              disabled={!serverName || creating}
+              loading={creating}
+            >
+              Create
+              <ArrowRight className="size-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

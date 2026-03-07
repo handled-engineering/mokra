@@ -8,8 +8,7 @@ export default async function ServicesPage() {
     include: {
       _count: {
         select: {
-          endpoints: true,
-          projects: true,
+          mockServers: true,
         },
       },
     },
@@ -59,8 +58,7 @@ export default async function ServicesPage() {
                     {service.description || "No description"}
                   </p>
                   <div className="flex gap-4 text-sm text-gray-500">
-                    <span>{service._count.endpoints} endpoints</span>
-                    <span>{service._count.projects} projects</span>
+                    <span>{service._count.mockServers} mock servers</span>
                   </div>
                 </CardContent>
               </Card>

@@ -17,9 +17,8 @@ export async function GET(req: Request, { params }: Props) {
   const service = await prisma.mockService.findUnique({
     where: { id: params.id },
     include: {
-      endpoints: true,
       _count: {
-        select: { projects: true },
+        select: { mockServers: true },
       },
     },
   })

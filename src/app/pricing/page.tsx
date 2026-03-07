@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/use-toast"
 import { Check, Sparkles, Crown, Zap } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 import { cn } from "@/lib/utils"
+import { analytics } from "@/lib/mixpanel"
+import { useEffect } from "react"
 
 const plans = [
   {
@@ -63,6 +65,11 @@ export default function PricingPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Track pricing page view
+  useEffect(() => {
+    analytics.pricingPageViewed({ currentPlan: session?.user?.plan })
+  }, [session?.user?.plan])
+
   const handleSubscribe = async (plan: string) => {
     if (!session) {
       router.push("/register")
@@ -75,6 +82,11 @@ export default function PricingPage() {
     }
 
     setLoading(plan)
+
+    // Track checkout started
+    const planConfig = plans.find((p) => p.plan === plan)
+    analytics.checkoutStarted({ plan, price: planConfig?.price || 0 })
+
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",

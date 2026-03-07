@@ -6,7 +6,17 @@
  *   npx tsx scripts/export-services.ts <slug>    # Export specific service
  */
 
-import { PrismaClient, MockEndpoint } from "@prisma/client"
+import { PrismaClient } from "@prisma/client"
+
+// Local type for endpoint data (from parsedSpec JSON or database relation)
+interface MockEndpoint {
+  path: string
+  method: string
+  description?: string | null
+  constraints?: string | null
+  requestSchema?: Record<string, string> | null
+  responseSchema?: Record<string, unknown> | null
+}
 import * as fs from "fs/promises"
 import * as path from "path"
 
@@ -43,7 +53,6 @@ interface EndpointJson {
 async function exportService(serviceId: string, outputPath: string) {
   const service = await prisma.mockService.findUnique({
     where: { id: serviceId },
-    include: { endpoints: true },
   })
 
   if (!service) {
@@ -90,12 +99,16 @@ ${service.documentation || "No documentation available."}
   const endpointsDir = path.join(serviceDir, "endpoints")
   await fs.mkdir(endpointsDir, { recursive: true })
 
+  // Extract endpoints from parsedSpec JSON
+  const parsedSpec = service.parsedSpec as { endpoints?: MockEndpoint[] } | null
+  const endpoints: MockEndpoint[] = parsedSpec?.endpoints ?? []
+
   // Export each endpoint
-  for (const endpoint of service.endpoints) {
+  for (const endpoint of endpoints) {
     await exportEndpoint(endpoint, endpointsDir)
   }
 
-  console.log(`  Exported ${service.endpoints.length} endpoints`)
+  console.log(`  Exported ${endpoints.length} endpoints`)
 }
 
 async function exportEndpoint(endpoint: MockEndpoint, baseDir: string) {

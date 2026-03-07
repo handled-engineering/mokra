@@ -1,4 +1,15 @@
-import { MockEndpoint, MockService, Prisma } from "@prisma/client"
+import { MockService, Prisma } from "@prisma/client"
+
+// Endpoint interface (loaded from filesystem, not database)
+interface MockEndpoint {
+  id: string
+  method: string
+  path: string
+  description?: string | null
+  requestSchema?: Record<string, unknown> | null
+  responseSchema?: Record<string, unknown> | null
+  constraints?: string | null
+}
 import { StateManager } from "./state-manager"
 import {
   matchPath,
@@ -18,6 +29,8 @@ import {
   generateDeleteResponse,
 } from "@/lib/ai/generate-stateful-response"
 import { prisma } from "@/lib/prisma"
+import { findCachedResponse, cacheResponse } from "@/lib/response-cache"
+import { PaginationConfig, RateLimitConfig } from "@/lib/services/types"
 
 interface MockRequest {
   method: string
@@ -34,34 +47,42 @@ interface MockResponse {
 }
 
 interface EndpointContextMap {
-  [endpointId: string]: string
+  [path: string]: string // Keyed by endpoint path pattern (e.g., "/v1/books/:id")
 }
 
 interface EndpointNotesMap {
-  [endpointId: string]: string
+  [endpointKey: string]: string // Keyed by "serviceSlug:METHOD:path"
 }
 
 export class MockEngine {
   private service: MockService & { endpoints: MockEndpoint[] }
   private stateManager: StateManager
-  private projectId: string
+  private mockServerId: string
+  private serviceSlug: string
   private serviceContext?: string
   private endpointContexts: EndpointContextMap
   private endpointNotes: EndpointNotesMap
+  private paginationConfig?: PaginationConfig
+  private rateLimitConfig?: RateLimitConfig
 
   constructor(
     service: MockService & { endpoints: MockEndpoint[] },
-    projectId: string,
+    mockServerId: string,
     serviceContext?: string,
     endpointContexts: EndpointContextMap = {},
-    endpointNotes: EndpointNotesMap = {}
+    endpointNotes: EndpointNotesMap = {},
+    paginationConfig?: PaginationConfig,
+    rateLimitConfig?: RateLimitConfig
   ) {
     this.service = service
-    this.projectId = projectId
-    this.stateManager = new StateManager(projectId)
+    this.mockServerId = mockServerId
+    this.serviceSlug = service.slug
+    this.stateManager = new StateManager(mockServerId)
     this.serviceContext = serviceContext
     this.endpointContexts = endpointContexts
     this.endpointNotes = endpointNotes
+    this.paginationConfig = paginationConfig
+    this.rateLimitConfig = rateLimitConfig
   }
 
   private isStatefulRequest(headers: Record<string, string>): boolean {
@@ -165,6 +186,34 @@ export class MockEngine {
     startTime: number,
     customInstruction?: string
   ): Promise<MockResponse> {
+    // Check Redis cache first for GET requests with custom instructions
+    if (customInstruction) {
+      try {
+        const cached = await findCachedResponse(
+          this.mockServerId,
+          this.serviceSlug,
+          request.method,
+          endpoint.path,
+          customInstruction
+        )
+
+        if (cached) {
+          const response: MockResponse = {
+            statusCode: cached.response.statusCode,
+            body: cached.response.body,
+            headers: {
+              ...cached.response.headers,
+              "X-Cache": "HIT",
+              ...(cached.similarity ? { "X-Cache-Similarity": cached.similarity.toFixed(3) } : {}),
+            },
+          }
+          return this.logAndReturn(request, startTime, response)
+        }
+      } catch (error) {
+        console.error("Cache lookup error:", error)
+      }
+    }
+
     const isCollection = isCollectionEndpoint(endpoint.path)
 
     // If it's a collection endpoint (e.g., /orders or /orders/:orderId/items), list resources
@@ -199,7 +248,20 @@ export class MockEngine {
         customInstruction,
       })
 
-      return this.logAndReturn(request, startTime, response)
+      // Cache the response
+      cacheResponse(
+        this.mockServerId,
+        this.serviceSlug,
+        request.method,
+        endpoint.path,
+        { statusCode: response.statusCode, body: response.body },
+        customInstruction
+      ).catch((error) => console.error("Error caching response:", error))
+
+      return this.logAndReturn(request, startTime, {
+        ...response,
+        headers: { ...response.headers, "X-Cache": "MISS" },
+      })
     }
 
     // Single resource endpoint - fetch specific record by composite ID
@@ -230,7 +292,20 @@ export class MockEngine {
         customInstruction,
       })
 
-      return this.logAndReturn(request, startTime, response)
+      // Cache the response
+      cacheResponse(
+        this.mockServerId,
+        this.serviceSlug,
+        request.method,
+        endpoint.path,
+        { statusCode: response.statusCode, body: response.body },
+        customInstruction
+      ).catch((error) => console.error("Error caching response:", error))
+
+      return this.logAndReturn(request, startTime, {
+        ...response,
+        headers: { ...response.headers, "X-Cache": "MISS" },
+      })
     }
 
     // No resource ID and not a collection - this shouldn't happen normally
@@ -281,8 +356,7 @@ export class MockEngine {
     const savedRecord = await this.stateManager.createResource(
       resourceType,
       compositeId,
-      recordData,
-      endpoint.id // Still track which endpoint created it
+      recordData
     )
 
     if (!savedRecord) {
@@ -344,8 +418,7 @@ export class MockEngine {
     const updatedRecord = await this.stateManager.updateResource(
       resourceType,
       resourceId,
-      updateData,
-      endpoint.id // Track which endpoint updated it
+      updateData
     )
 
     if (!updatedRecord) {
@@ -419,15 +492,49 @@ export class MockEngine {
     params: Record<string, string>,
     startTime: number
   ): Promise<MockResponse> {
-    // Get existing state for context
-    const existingState = await this.stateManager.getAllState()
-
     // Extract custom instruction from header (case-insensitive)
     const customInstruction =
       request.headers["x-custom-instruction"] ||
       request.headers["X-Custom-Instruction"] ||
       request.headers["x-mock-instruction"] ||
       request.headers["X-Mock-Instruction"]
+
+    // Check Redis cache first before making LLM call
+    try {
+      const cached = await findCachedResponse(
+        this.mockServerId,
+        this.serviceSlug,
+        request.method,
+        endpoint.path,
+        customInstruction
+      )
+
+      if (cached) {
+        // Return cached response with cache hit header
+        const response: MockResponse = {
+          statusCode: cached.response.statusCode,
+          body: cached.response.body,
+          headers: {
+            ...cached.response.headers,
+            "X-Cache": "HIT",
+            ...(cached.similarity ? { "X-Cache-Similarity": cached.similarity.toFixed(3) } : {}),
+          },
+        }
+        return this.logAndReturn(request, startTime, response)
+      }
+    } catch (error) {
+      // Cache lookup failed, continue with LLM call
+      console.error("Cache lookup error:", error)
+    }
+
+    // Get existing state for context
+    const existingState = await this.stateManager.getAllState()
+
+    // Look up endpoint context by path pattern
+    const endpointContext = this.endpointContexts[endpoint.path]
+    // Look up endpoint notes by the full key (serviceSlug:METHOD:path)
+    const endpointNotesKey = `${this.serviceSlug}:${endpoint.method}:${endpoint.path}`
+    const endpointNotes = this.endpointNotes[endpointNotesKey]
 
     // Generate response using AI
     const aiResponse = await generateMockResponse({
@@ -444,9 +551,11 @@ export class MockEngine {
       })),
       documentation: this.service.documentation,
       serviceContext: this.serviceContext,
-      endpointContext: this.endpointContexts[endpoint.id],
+      endpointContext,
       customInstruction,
-      endpointNotes: this.endpointNotes[endpoint.id],
+      endpointNotes,
+      paginationConfig: this.paginationConfig,
+      rateLimitConfig: this.rateLimitConfig,
     })
 
     // Handle state updates from AI (for backwards compatibility)
@@ -463,16 +572,14 @@ export class MockEngine {
           await this.stateManager.createResource(
             stateResourceType,
             stateResourceId,
-            data as Record<string, unknown>,
-            endpoint.id
+            data as Record<string, unknown>
           )
           break
         case "update":
           await this.stateManager.updateResource(
             stateResourceType,
             stateResourceId,
-            data as Record<string, unknown>,
-            endpoint.id
+            data as Record<string, unknown>
           )
           break
         case "delete":
@@ -481,10 +588,30 @@ export class MockEngine {
       }
     }
 
-    return this.logAndReturn(request, startTime, {
+    const response: MockResponse = {
       statusCode: aiResponse.statusCode,
       body: aiResponse.body,
+      headers: {
+        "X-Cache": "MISS",
+      },
+    }
+
+    // Cache the response in Redis (async, don't wait)
+    cacheResponse(
+      this.mockServerId,
+      this.serviceSlug,
+      request.method,
+      endpoint.path,
+      {
+        statusCode: aiResponse.statusCode,
+        body: aiResponse.body,
+      },
+      customInstruction
+    ).catch((error) => {
+      console.error("Error caching response:", error)
     })
+
+    return this.logAndReturn(request, startTime, response)
   }
 
   private generateId(): string {
@@ -507,7 +634,7 @@ export class MockEngine {
     // Log the request
     await prisma.requestLog.create({
       data: {
-        projectId: this.projectId,
+        mockServerId: this.mockServerId,
         method: request.method,
         path: request.path,
         statusCode: response.statusCode,

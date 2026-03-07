@@ -1,0 +1,10 @@
+{
+  "error": {
+    "type": "authentication_error",
+    "code": "invalid_token",
+    "message": "Invalid or expired authentication token",
+    "details": {
+      "reason": "The provided Bearer token is invalid, expired, or missing"
+    }
+  }
+}

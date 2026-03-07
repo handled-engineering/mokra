@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -112,8 +113,8 @@ export function ContributorSidebar({ user }: ContributorSidebarProps) {
           )}
         </div>
         <div className={cn("mt-3", collapsed && "flex justify-center")}>
-          <Link
-            href="/api/auth/signout"
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
             className={cn(
               "flex items-center justify-center gap-2 rounded-md py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors",
               collapsed ? "w-full" : "w-full"
@@ -122,7 +123,7 @@ export function ContributorSidebar({ user }: ContributorSidebarProps) {
           >
             <LogOut className="h-4 w-4" />
             {!collapsed && "Sign out"}
-          </Link>
+          </button>
         </div>
       </div>
     </aside>

@@ -1,5 +1,16 @@
-import { MockEndpoint } from "@prisma/client"
 import { generateCompletion, AIProvider } from "./providers"
+import { PaginationConfig, RateLimitConfig } from "@/lib/services/types"
+
+// Endpoint interface (loaded from filesystem, not database)
+interface MockEndpoint {
+  id: string
+  method: string
+  path: string
+  description?: string | null
+  requestSchema?: Record<string, unknown> | null
+  responseSchema?: Record<string, unknown> | null
+  constraints?: string | null
+}
 
 interface StateEntry {
   resourceType: string
@@ -21,6 +32,8 @@ interface GenerateResponseParams {
   customInstruction?: string // Per-request custom instruction from x-custom-instruction header
   endpointNotes?: string // Notes from notes.md file for file-based endpoints
   provider?: AIProvider // Optional AI provider override
+  paginationConfig?: PaginationConfig // Pagination rules from pagination.json
+  rateLimitConfig?: RateLimitConfig // Rate limit rules from rate-limit.json
 }
 
 interface GeneratedResponse {
@@ -34,8 +47,68 @@ interface GeneratedResponse {
   }
 }
 
+function buildPaginationRules(config?: PaginationConfig): string {
+  if (!config) return ""
+
+  const rules: string[] = ["\nPagination Rules:"]
+
+  rules.push(`- Pagination type: ${config.type}`)
+  rules.push(`- Default page size: ${config.defaultPageSize} items`)
+  rules.push(`- Maximum page size: ${config.maxPageSize} items`)
+
+  if (config.type === "cursor" && config.connectionPattern) {
+    rules.push(`- Use cursor-based pagination`)
+    rules.push(`- Include next_cursor/prev_cursor in response metadata`)
+  } else if (config.type === "offset" && config.offsetPattern) {
+    rules.push(`- Use offset/limit pagination`)
+    rules.push(`- Offset param: ${config.offsetPattern.offsetParam}, Limit param: ${config.offsetPattern.limitParam}`)
+  } else if (config.type === "page" && config.pagePattern) {
+    rules.push(`- Use page-based pagination`)
+    rules.push(`- Page param: ${config.pagePattern.pageParam}, Per-page param: ${config.pagePattern.perPageParam}`)
+  }
+
+  if (config.notes) {
+    rules.push(`- Note: ${config.notes}`)
+  }
+
+  return rules.join("\n")
+}
+
+function buildRateLimitRules(config?: RateLimitConfig): string {
+  if (!config) return ""
+
+  const rules: string[] = ["\nRate Limiting Context:"]
+
+  rules.push(`- Rate limit type: ${config.type}`)
+
+  if (config.costBased) {
+    rules.push(`- This API uses cost-based rate limiting`)
+  }
+
+  if (config.fixedWindow) {
+    rules.push(`- Requests per window: ${config.fixedWindow.requestsPerWindow}`)
+    rules.push(`- Window size: ${config.fixedWindow.windowSizeSeconds} seconds`)
+  }
+
+  if (config.headers) {
+    const headersList: string[] = []
+    if (config.headers.limit) headersList.push(`Limit: ${config.headers.limit}`)
+    if (config.headers.remaining) headersList.push(`Remaining: ${config.headers.remaining}`)
+    if (config.headers.reset) headersList.push(`Reset: ${config.headers.reset}`)
+    if (headersList.length > 0) {
+      rules.push(`- Rate limit headers: ${headersList.join(", ")}`)
+    }
+  }
+
+  if (config.notes) {
+    rules.push(`- Note: ${config.notes}`)
+  }
+
+  return rules.join("\n")
+}
+
 export async function generateMockResponse(params: GenerateResponseParams): Promise<GeneratedResponse> {
-  const { endpoint, method, path, pathParams, queryParams, body, existingState, documentation, serviceContext, endpointContext, customInstruction, endpointNotes, provider } = params
+  const { endpoint, method, path, pathParams, queryParams, body, existingState, documentation, serviceContext, endpointContext, customInstruction, endpointNotes, provider, paginationConfig, rateLimitConfig } = params
 
   // Build context about existing state
   const stateContext = existingState.length > 0
@@ -81,12 +154,17 @@ This instruction overrides default behavior.
 `
     : ""
 
+  // Build pagination and rate limit rules
+  const paginationRulesSection = buildPaginationRules(paginationConfig)
+  const rateLimitRulesSection = buildRateLimitRules(rateLimitConfig)
+
   const prompt = `You are a mock API server. Generate a realistic response for the following API request.
 ${customInstructionSection}
 
 API Documentation Context:
 ${documentation}
-${customContextSection}${endpointNotesSection}
+${customContextSection}${endpointNotesSection}${paginationRulesSection}${rateLimitRulesSection}
+
 Endpoint Details:
 - Method: ${method}
 - Path Pattern: ${endpoint.path}

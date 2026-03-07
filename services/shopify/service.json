@@ -1,0 +1,23 @@
+{
+  "name": "Shopify Admin API",
+  "slug": "shopify",
+  "description": "Mock implementation of Shopify's Admin GraphQL API for testing e-commerce integrations",
+  "version": "2024-01",
+  "type": "graphql",
+  "baseUrl": "https://your-store.myshopify.com/admin/api",
+  "documentationUrl": "https://shopify.dev/docs/api/admin-graphql",
+  "authentication": {
+    "type": "bearer",
+    "required": true
+  },
+  "graphql": {
+    "versionHeader": "X-Shopify-API-Version",
+    "versionPath": true,
+    "defaultVersion": "2024-01"
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 40
+  },
+  "isActive": true
+}

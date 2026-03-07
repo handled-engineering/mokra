@@ -1,0 +1,9 @@
+{
+  "path": "/v1/books",
+  "method": "POST",
+  "description": "Create a new book",
+  "summary": "Create book",
+  "tags": ["books"],
+  "constraints": "Title is required and must be between 1-200 characters. Author is required. ISBN must be valid ISBN-13 format if provided.",
+  "defaultStatusCode": 201
+}

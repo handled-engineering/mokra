@@ -1,0 +1,11 @@
+{
+  "error": {
+    "type": "authorization_error",
+    "code": "forbidden",
+    "message": "You do not have permission to perform this action",
+    "details": {
+      "required_scope": "books:write",
+      "your_scopes": ["books:read"]
+    }
+  }
+}

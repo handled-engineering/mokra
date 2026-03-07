@@ -1,0 +1,15 @@
+{
+  "path": "/v1/books/:bookId",
+  "method": "GET",
+  "description": "Retrieve a specific book by ID",
+  "summary": "Get book",
+  "tags": ["books"],
+  "pathParameters": {
+    "bookId": {
+      "type": "string",
+      "description": "The unique identifier of the book (UUID)"
+    }
+  },
+  "constraints": "Returns 404 if book not found.",
+  "defaultStatusCode": 200
+}

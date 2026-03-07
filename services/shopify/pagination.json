@@ -1,0 +1,18 @@
+{
+  "type": "cursor",
+  "defaultPageSize": 10,
+  "maxPageSize": 250,
+  "cursorField": "cursor",
+  "connectionPattern": {
+    "edgesField": "edges",
+    "nodeField": "node",
+    "pageInfoField": "pageInfo",
+    "pageInfoFields": {
+      "hasNextPage": "hasNextPage",
+      "hasPreviousPage": "hasPreviousPage",
+      "startCursor": "startCursor",
+      "endCursor": "endCursor"
+    }
+  },
+  "notes": "Shopify uses Relay-style cursor pagination. Always include pageInfo with hasNextPage/hasPreviousPage."
+}

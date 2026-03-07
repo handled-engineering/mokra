@@ -27,16 +27,19 @@ enum SubscriptionPlan {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String?
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String
+  name                String?
+  role                UserRole  @default(USER)
+  onboardingDismissed Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   subscription  Subscription?
-  projects      UserProject[]
+  mockServers   MockServer[]
+  tests         MockworldTest[]
+  apiKeys       ApiKey[]
 }
 
 model Subscription {
@@ -58,93 +61,212 @@ model MockService {
   name          String
   slug          String    @unique
   description   String?
+  logoUrl       String?
+  category      String?   // Category ID from config/categories.json
   documentation String    @db.Text
   parsedSpec    Json?
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  endpoints     MockEndpoint[]
-  projects      UserProject[]
+  mockServers   MockServer[]
 }
 
-model MockEndpoint {
-  id             String   @id @default(cuid())
-  serviceId      String
-  method         String
-  path           String
-  description    String?
-  requestSchema  Json?
-  responseSchema Json?
-  constraints    String?  @db.Text
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  service        MockService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  @@unique([serviceId, method, path])
-}
-
-model UserProject {
+model MockServer {
   id            String   @id @default(cuid())
   userId        String
   serviceId     String
   name          String
-  apiKey        String   @unique
+  apiKey        String?  @unique // Deprecated: will be removed after migration to shared API keys
   isActive      Boolean  @default(true)
   customContext String?  @db.Text // Service-level custom context for response generation
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  service          MockService             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  user             User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service          MockService               @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   mockStates       MockState[]
   requestLogs      RequestLog[]
-  endpointContexts ProjectEndpointContext[]
+  endpointContexts MockServerEndpointContext[]
+  tests            TestMockServer[]
+  apiKeyExclusions ApiKeyExclusion[]
 }
 
-model ProjectEndpointContext {
-  id          String   @id @default(cuid())
-  projectId   String
-  endpointId  String
-  context     String   @db.Text // Endpoint-specific custom context
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  key         String    @unique
+  name        String
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  project     UserProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exclusions  ApiKeyExclusion[]
 
-  @@unique([projectId, endpointId])
+  @@index([userId])
+  @@index([key])
+}
+
+model ApiKeyExclusion {
+  id           String   @id @default(cuid())
+  apiKeyId     String
+  mockServerId String
+
+  apiKey       ApiKey     @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  mockServer   MockServer @relation(fields: [mockServerId], references: [id], onDelete: Cascade)
+
+  @@unique([apiKeyId, mockServerId])
+  @@index([apiKeyId])
+  @@index([mockServerId])
+}
+
+model MockServerEndpointContext {
+  id            String   @id @default(cuid())
+  mockServerId  String
+  path          String   // Endpoint path to match (e.g., "/customers", "/orders/:id")
+  context       String   @db.Text // Endpoint-specific custom context
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mockServer    MockServer @relation(fields: [mockServerId], references: [id], onDelete: Cascade)
+
+  @@unique([mockServerId, path])
 }
 
 model MockState {
   id           String   @id @default(cuid())
-  projectId    String
-  endpointId   String   @default("legacy") // Track which endpoint this state belongs to
+  mockServerId String
   resourceType String
   resourceId   String
   data         Json
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  project      UserProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mockServer   MockServer @relation(fields: [mockServerId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, endpointId, resourceType, resourceId])
-  @@index([projectId, endpointId, resourceType])
-  @@index([projectId, endpointId]) // For counting records per endpoint
+  @@unique([mockServerId, resourceType, resourceId])
+  @@index([mockServerId, resourceType])
 }
 
 model RequestLog {
-  id         String   @id @default(cuid())
-  projectId  String
-  method     String
-  path       String
-  statusCode Int
-  request    Json?
-  response   Json?
-  duration   Int
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  mockServerId String
+  method       String
+  path         String
+  statusCode   Int
+  request      Json?
+  response     Json?
+  duration     Int
+  createdAt    DateTime @default(now())
 
-  project    UserProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mockServer   MockServer @relation(fields: [mockServerId], references: [id], onDelete: Cascade)
 
-  @@index([projectId, createdAt])
+  @@index([mockServerId, createdAt])
+}
+
+// ==========================================
+// Mockworld Test Models
+// ==========================================
+
+enum TestRunStatus {
+  PENDING
+  RUNNING
+  PASSED
+  FAILED
+}
+
+model MockworldTest {
+  id                 String   @id @default(cuid())
+  userId             String
+  name               String
+  description        String?
+  customInstructions String?  @db.Text
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mockServers       TestMockServer[]
+  stateRequirements TestStateRequirement[]
+  asserts           TestAssert[]
+  runs              TestRun[]
+
+  @@index([userId])
+}
+
+model TestMockServer {
+  id           String @id @default(cuid())
+  testId       String
+  mockServerId String
+
+  test       MockworldTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  mockServer MockServer    @relation(fields: [mockServerId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, mockServerId])
+  @@index([testId])
+  @@index([mockServerId])
+}
+
+model TestStateRequirement {
+  id           String  @id @default(cuid())
+  testId       String
+  mockServerId String
+  resourceType String
+  resourcePath String
+  initialState Json
+  description  String?
+
+  test MockworldTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+}
+
+model TestAssert {
+  id               String  @id @default(cuid())
+  testId           String
+  name             String
+  description      String?
+  sonataExpression String  @db.Text
+  mockServerId     String
+  targetResourcePath String?
+  expectedResult   Json?
+
+  test    MockworldTest         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  results TestRunAssertResult[]
+
+  @@index([testId])
+}
+
+model TestRun {
+  id          String        @id @default(cuid())
+  testId      String
+  status      TestRunStatus @default(PENDING)
+  startedAt   DateTime      @default(now())
+  completedAt DateTime?
+  duration    Int?
+  logs        String?       @db.Text
+  error       String?
+
+  test         MockworldTest         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  assertResults TestRunAssertResult[]
+
+  @@index([testId, startedAt])
+}
+
+model TestRunAssertResult {
+  id            String   @id @default(cuid())
+  runId         String
+  assertId      String
+  passed        Boolean
+  actualValue   Json?
+  expectedValue Json?
+  error         String?
+
+  run    TestRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  assert TestAssert @relation(fields: [assertId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([assertId])
 }

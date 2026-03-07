@@ -5,6 +5,8 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { parseApiDocumentation, parseApiDocumentationFromUrl } from "@/lib/ai/parse-docs"
+import { isValidCategory } from "@/lib/categories"
+import { serverAnalytics } from "@/lib/mixpanel-server"
 
 function isUrl(str: string): boolean {
   const trimmed = str.trim()
@@ -15,6 +17,7 @@ import { slugify } from "@/lib/utils"
 const createServiceSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
+  category: z.string().optional(),
   documentation: z.string().min(10, "Documentation is required"),
 })
 
@@ -29,8 +32,7 @@ export async function GET() {
     include: {
       _count: {
         select: {
-          endpoints: true,
-          projects: true,
+          mockServers: true,
         },
       },
     },
@@ -49,7 +51,15 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const { name, description, documentation } = createServiceSchema.parse(body)
+    const { name, description, category, documentation } = createServiceSchema.parse(body)
+
+    // Validate category if provided
+    if (category && !isValidCategory(category)) {
+      return NextResponse.json(
+        { error: "Invalid category" },
+        { status: 400 }
+      )
+    }
 
     // Generate unique slug
     let slug = slugify(name)
@@ -63,36 +73,26 @@ export async function POST(req: Request) {
       ? await parseApiDocumentationFromUrl(documentation.trim())
       : await parseApiDocumentation(documentation)
 
-    // Create service and endpoints in a transaction
-    const service = await prisma.$transaction(async (tx) => {
-      const newService = await tx.mockService.create({
-        data: {
-          name,
-          slug,
-          description: description || parsedSpec.description,
-          documentation,
-          parsedSpec: JSON.parse(JSON.stringify(parsedSpec)) as Prisma.InputJsonValue,
-          isActive: true,
-        },
-      })
-
-      // Create endpoints
-      if (parsedSpec.endpoints && parsedSpec.endpoints.length > 0) {
-        await tx.mockEndpoint.createMany({
-          data: parsedSpec.endpoints.map((ep) => ({
-            serviceId: newService.id,
-            method: ep.method.toUpperCase(),
-            path: ep.path,
-            description: ep.description,
-            requestSchema: (ep.requestSchema || Prisma.JsonNull) as Prisma.InputJsonValue,
-            responseSchema: (ep.responseSchema || Prisma.JsonNull) as Prisma.InputJsonValue,
-            constraints: ep.constraints,
-          })),
-        })
-      }
-
-      return newService
+    // Create service with parsed spec (endpoints are stored in parsedSpec)
+    const service = await prisma.mockService.create({
+      data: {
+        name,
+        slug,
+        description: description || parsedSpec.description,
+        category,
+        documentation,
+        parsedSpec: JSON.parse(JSON.stringify(parsedSpec)) as Prisma.InputJsonValue,
+        isActive: true,
+      },
     })
+
+    // Track service created
+    serverAnalytics.serviceCreated(session.user.id, {
+      serviceId: service.id,
+      serviceName: service.name,
+      serviceSlug: service.slug,
+      serviceType: "rest",
+    }, session.user.email)
 
     return NextResponse.json({
       service,

@@ -10,6 +10,9 @@ import {
   EndpointFolder,
   MockEndpointCompat,
   MockServiceCompat,
+  GraphQLSchemaVersion,
+  PaginationConfig,
+  RateLimitConfig,
 } from "./types"
 
 const DEFAULT_SERVICES_PATH = path.join(process.cwd(), "services")
@@ -97,13 +100,35 @@ export class ServiceLoader {
       const readmePath = path.join(servicePath, "README.md")
       const readme = await this.readTextFile(readmePath)
 
-      // Load endpoints
+      // Load pagination.json
+      const paginationPath = path.join(servicePath, "pagination.json")
+      const paginationConfig = await this.readJsonFile<PaginationConfig>(paginationPath)
+
+      // Load rate-limit.json
+      const rateLimitPath = path.join(servicePath, "rate-limit.json")
+      const rateLimitConfig = await this.readJsonFile<RateLimitConfig>(rateLimitPath)
+
+      // Load based on service type
+      const serviceType = config.type || "rest"
+
+      let graphqlSchemas: GraphQLSchemaVersion[] | undefined
+
+      if (serviceType === "graphql") {
+        // Load GraphQL schemas from endpoints folder
+        graphqlSchemas = await this.loadGraphQLSchemas(servicePath)
+      }
+
+      // Load endpoints for all service types (REST and GraphQL can both have endpoints)
       const endpoints = await this.loadEndpoints(servicePath)
 
       const service: LoadedService = {
         ...config,
         slug, // Ensure slug matches folder name
+        type: serviceType,
         endpoints,
+        graphqlSchemas,
+        paginationConfig: paginationConfig || undefined,
+        rateLimitConfig: rateLimitConfig || undefined,
         readme: readme || undefined,
       }
 
@@ -156,6 +181,73 @@ export class ServiceLoader {
   }
 
   /**
+   * Load GraphQL schemas from endpoints folder
+   * Structure: endpoints/{version}/schema.graphql
+   */
+  private async loadGraphQLSchemas(servicePath: string): Promise<GraphQLSchemaVersion[]> {
+    const endpointsPath = path.join(servicePath, "endpoints")
+    const schemas: GraphQLSchemaVersion[] = []
+
+    try {
+      await fs.stat(endpointsPath)
+    } catch {
+      // No endpoints directory
+      return []
+    }
+
+    try {
+      const entries = await fs.readdir(endpointsPath, { withFileTypes: true })
+
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+
+        const version = entry.name
+        const schemaPath = path.join(endpointsPath, version, "schema.graphql")
+
+        try {
+          const schema = await fs.readFile(schemaPath, "utf-8")
+          schemas.push({
+            version,
+            schema,
+            schemaPath,
+          })
+        } catch {
+          // No schema.graphql in this version folder
+          console.warn(`No schema.graphql found in ${schemaPath}`)
+        }
+      }
+    } catch (error) {
+      console.error(`Error loading GraphQL schemas from ${endpointsPath}:`, error)
+    }
+
+    return schemas
+  }
+
+  /**
+   * Get a specific GraphQL schema version
+   */
+  async getGraphQLSchema(slug: string, version?: string): Promise<GraphQLSchemaVersion | null> {
+    const service = await this.loadService(slug)
+    if (!service || service.type !== "graphql" || !service.graphqlSchemas) {
+      return null
+    }
+
+    if (version) {
+      return service.graphqlSchemas.find((s) => s.version === version) || null
+    }
+
+    // Return default version or latest
+    const defaultVersion = service.graphql?.defaultVersion
+    if (defaultVersion) {
+      const found = service.graphqlSchemas.find((s) => s.version === defaultVersion)
+      if (found) return found
+    }
+
+    // Return the first (or latest) schema
+    return service.graphqlSchemas[0] || null
+  }
+
+  /**
    * Load all endpoints for a service
    */
   private async loadEndpoints(servicePath: string): Promise<LoadedEndpoint[]> {
@@ -182,7 +274,7 @@ export class ServiceLoader {
   }
 
   /**
-   * Recursively scan for endpoint folders (folders containing HTTP method subfolders)
+   * Recursively scan for endpoint folders (folders containing HTTP method subfolders or schema.graphql)
    */
   private async scanEndpointFolders(
     basePath: string,
@@ -195,11 +287,26 @@ export class ServiceLoader {
       const entries = await fs.readdir(currentPath, { withFileTypes: true })
       const httpMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
+      // Check if this folder contains a schema.graphql (GraphQL endpoint)
+      const hasGraphQLSchema = entries.some(
+        (e) => !e.isDirectory() && e.name === "schema.graphql"
+      )
+
+      if (hasGraphQLSchema) {
+        // This is a GraphQL endpoint folder
+        folders.push({
+          servicePath: basePath,
+          relativePath,
+          method: "POST", // GraphQL uses POST
+          fullPath: currentPath,
+        })
+      }
+
       for (const entry of entries) {
         if (!entry.isDirectory()) continue
 
         if (httpMethods.includes(entry.name)) {
-          // This is a method folder
+          // This is a REST method folder
           folders.push({
             servicePath: basePath,
             relativePath,
@@ -231,9 +338,13 @@ export class ServiceLoader {
     const endpointPath = folder.fullPath
 
     try {
-      // Load endpoint.json
+      // Load endpoint.json (optional)
       const configPath = path.join(endpointPath, "endpoint.json")
       const config = await this.readJsonFile<EndpointConfig>(configPath)
+
+      // Check for GraphQL schema
+      const schemaPath = path.join(endpointPath, "schema.graphql")
+      const graphqlSchema = await this.readTextFile(schemaPath)
 
       if (!config) {
         // Create minimal config from folder structure
@@ -243,6 +354,7 @@ export class ServiceLoader {
           method: folder.method as EndpointConfig["method"],
           isStateful: false,
           responses: {},
+          graphqlSchema: graphqlSchema || undefined,
         }
       }
 
@@ -266,6 +378,7 @@ export class ServiceLoader {
         requestSchema: requestSchema || undefined,
         responses,
         notes: notes || undefined,
+        graphqlSchema: graphqlSchema || undefined,
       }
 
       return endpoint

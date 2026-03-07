@@ -1,0 +1,11 @@
+{
+  "error": {
+    "type": "server_error",
+    "code": "internal_error",
+    "message": "An unexpected error occurred",
+    "details": {
+      "request_id": "req_abc123xyz",
+      "timestamp": "2024-03-06T10:30:00Z"
+    }
+  }
+}

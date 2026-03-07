@@ -1,0 +1,13 @@
+{
+  "error": {
+    "type": "rate_limit_error",
+    "code": "too_many_requests",
+    "message": "Rate limit exceeded. Please slow down your requests.",
+    "details": {
+      "limit": 60,
+      "remaining": 0,
+      "reset_at": "2024-03-06T12:00:00Z",
+      "retry_after_seconds": 45
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "categories": [
+    {
+      "id": "payments",
+      "name": "Payments",
+      "description": "Payment processing and financial transaction APIs"
+    },
+    {
+      "id": "ecommerce",
+      "name": "E-Commerce",
+      "description": "Online store, shopping, and retail APIs"
+    },
+    {
+      "id": "communication",
+      "name": "Communication",
+      "description": "Email, SMS, chat, and messaging APIs"
+    },
+    {
+      "id": "social",
+      "name": "Social Media",
+      "description": "Social platform and networking APIs"
+    },
+    {
+      "id": "analytics",
+      "name": "Analytics",
+      "description": "Data analytics, tracking, and reporting APIs"
+    },
+    {
+      "id": "storage",
+      "name": "Storage",
+      "description": "File storage, CDN, and data management APIs"
+    },
+    {
+      "id": "ai",
+      "name": "AI & ML",
+      "description": "Artificial intelligence and machine learning APIs"
+    },
+    {
+      "id": "crm",
+      "name": "CRM",
+      "description": "Customer relationship management APIs"
+    },
+    {
+      "id": "productivity",
+      "name": "Productivity",
+      "description": "Project management and collaboration APIs"
+    },
+    {
+      "id": "other",
+      "name": "Other",
+      "description": "Other APIs and services"
+    }
+  ]
+}

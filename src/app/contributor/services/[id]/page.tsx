@@ -14,7 +14,7 @@ export default async function ServiceDetailPage({ params }: Props) {
     where: { id: params.id },
     include: {
       _count: {
-        select: { projects: true },
+        select: { mockServers: true },
       },
     },
   })
@@ -65,8 +65,8 @@ export default async function ServiceDetailPage({ params }: Props) {
                 </span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Active Projects</p>
-                <p className="text-2xl font-bold">{service._count.projects}</p>
+                <p className="text-sm text-gray-600">Mock Servers</p>
+                <p className="text-2xl font-bold">{service._count.mockServers}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Created</p>

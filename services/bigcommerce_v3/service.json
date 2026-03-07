@@ -1,0 +1,22 @@
+{
+  "name": "Example Books API",
+  "slug": "example-api",
+  "description": "A sample API demonstrating the file-based endpoint system",
+  "version": "1.0.0",
+  "baseUrl": "https://api.example.com",
+  "documentationUrl": "https://docs.example.com",
+  "defaultHeaders": {
+    "Content-Type": "application/json"
+  },
+  "authentication": {
+    "type": "bearer",
+    "required": true,
+    "validateFormat": true
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 60,
+    "burstLimit": 10
+  },
+  "isActive": true
+}

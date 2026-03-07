@@ -1,0 +1,9 @@
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "New Book Title",
+  "author": "Author Name",
+  "isbn": "978-1234567890",
+  "page_count": 250,
+  "published_at": "2024-01-01",
+  "created_at": "2024-03-06T10:30:00Z"
+}

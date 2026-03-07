@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/components/ui/use-toast"
 import { Logo } from "@/components/ui/logo"
 import { ArrowLeft } from "lucide-react"
+import { analytics } from "@/lib/mixpanel"
 
 function ShootingStars() {
   return (
@@ -62,6 +63,7 @@ function LoginForm() {
         })
         setLoading(false)
       } else if (result?.ok) {
+        analytics.userLoggedIn({ method: "credentials" })
         // Small delay to ensure session cookie is set
         await new Promise(resolve => setTimeout(resolve, 100))
         window.location.href = callbackUrl

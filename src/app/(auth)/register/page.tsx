@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/components/ui/use-toast"
 import { Logo } from "@/components/ui/logo"
 import { ArrowLeft, Check } from "lucide-react"
+import { analytics } from "@/lib/mixpanel"
 
 function ShootingStars() {
   return (
@@ -82,6 +83,8 @@ export default function RegisterPage() {
       if (!res.ok) {
         throw new Error(data.error || "Registration failed")
       }
+
+      analytics.userSignedUp({ plan: "FREE" })
 
       toast({
         title: "Success",
