@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { MockService } from "@prisma/client"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { RefreshCw } from "lucide-react"
 
 interface Props {
   service: MockService
@@ -13,7 +12,6 @@ interface Props {
 
 export function ServiceActions({ service }: Props) {
   const [loading, setLoading] = useState(false)
-  const [regenerating, setRegenerating] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -75,50 +73,12 @@ export function ServiceActions({ service }: Props) {
     }
   }
 
-  const regenerateDocumentation = async () => {
-    if (!confirm("This will re-parse the documentation and regenerate all endpoints. Continue?")) return
-
-    setRegenerating(true)
-    try {
-      const res = await fetch(`/api/contributor/services/${service.id}/regenerate`, {
-        method: "POST",
-      })
-
-      if (!res.ok) {
-        throw new Error("Failed to regenerate")
-      }
-
-      const data = await res.json()
-      toast({
-        title: "Success",
-        description: `Regenerated ${data.endpointsCount} endpoints (was ${data.previousCount})`,
-      })
-      router.refresh()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to regenerate documentation",
-        variant: "destructive",
-      })
-    } finally {
-      setRegenerating(false)
-    }
-  }
-
   return (
     <div className="flex gap-2">
-      <Button
-        variant="outline"
-        onClick={regenerateDocumentation}
-        disabled={loading || regenerating}
-      >
-        <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? "animate-spin" : ""}`} />
-        {regenerating ? "Regenerating..." : "Regenerate"}
-      </Button>
-      <Button variant="outline" onClick={toggleActive} disabled={loading || regenerating}>
+      <Button variant="outline" onClick={toggleActive} disabled={loading}>
         {service.isActive ? "Deactivate" : "Activate"}
       </Button>
-      <Button variant="destructive" onClick={deleteService} disabled={loading || regenerating}>
+      <Button variant="destructive" onClick={deleteService} disabled={loading}>
         Delete
       </Button>
     </div>
