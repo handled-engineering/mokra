@@ -1,0 +1,19 @@
+{
+  "path": "/v1/books/:bookId/pages/:pageId",
+  "method": "GET",
+  "description": "Retrieve a specific page from a book",
+  "summary": "Get book page",
+  "tags": ["books", "pages"],
+  "pathParameters": {
+    "bookId": {
+      "type": "string",
+      "description": "The unique identifier of the book (UUID)"
+    },
+    "pageId": {
+      "type": "integer",
+      "description": "The page number"
+    }
+  },
+  "constraints": "Returns 404 if book or page not found. Page numbers start at 1.",
+  "defaultStatusCode": 200
+}

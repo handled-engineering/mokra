@@ -12,7 +12,7 @@ import {
   LogOut,
   ChevronLeft,
   Crown,
-  Shield,
+  PenTool,
 } from "lucide-react"
 import { Logo } from "./logo"
 
@@ -90,25 +90,6 @@ export function Sidebar({ user }: SidebarProps) {
             </Link>
           )
         })}
-
-        {user.role === "ADMIN" && (
-          <>
-            <div className={cn("my-4 border-t border-sidebar-muted", collapsed && "mx-1")} />
-            <Link
-              href="/admin"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                pathname.startsWith("/admin")
-                  ? "bg-sidebar-accent text-white shadow-glow"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-muted hover:text-sidebar-foreground"
-              )}
-              title={collapsed ? "Admin" : undefined}
-            >
-              <Shield className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>Admin Panel</span>}
-            </Link>
-          </>
-        )}
       </nav>
 
       {/* Upgrade Banner */}
@@ -126,6 +107,25 @@ export function Sidebar({ user }: SidebarProps) {
             className="flex items-center justify-center w-full py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             Upgrade Now
+          </Link>
+        </div>
+      )}
+
+      {/* Contributor Panel - at bottom before user section */}
+      {(user.role === "CONTRIBUTOR" || user.role === "ADMIN") && (
+        <div className={cn("px-3 pb-3", collapsed && "px-2")}>
+          <Link
+            href="/contributor"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              pathname.startsWith("/contributor")
+                ? "bg-sidebar-accent text-white shadow-glow"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-muted hover:text-sidebar-foreground"
+            )}
+            title={collapsed ? "Contributor" : undefined}
+          >
+            <PenTool className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && <span>Contributor Panel</span>}
           </Link>
         </div>
       )}

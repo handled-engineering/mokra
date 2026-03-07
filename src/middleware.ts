@@ -6,9 +6,9 @@ export default withAuth(
     const token = req.nextauth.token
     const pathname = req.nextUrl.pathname
 
-    // Admin routes - require ADMIN role
-    if (pathname.startsWith("/admin")) {
-      if (token?.role !== "ADMIN") {
+    // Contributor routes - require CONTRIBUTOR or ADMIN role
+    if (pathname.startsWith("/contributor")) {
+      if (token?.role !== "CONTRIBUTOR" && token?.role !== "ADMIN") {
         return NextResponse.redirect(new URL("/dashboard", req.url))
       }
     }

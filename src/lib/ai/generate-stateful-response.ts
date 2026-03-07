@@ -1,11 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk"
 import { MockEndpoint } from "@prisma/client"
-
-function getAnthropic() {
-  return new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  })
-}
+import { generateCompletion } from "./providers"
 
 interface ValidationResult {
   valid: boolean
@@ -39,8 +33,6 @@ export async function validateRequestBody(
   requestBody: unknown,
   endpoint: MockEndpoint
 ): Promise<ValidationResult> {
-  const anthropic = getAnthropic()
-
   const prompt = `You are a request validator. Validate the following request body against the validation rules.
 
 Validation Rules:
@@ -70,19 +62,13 @@ If valid, return an empty errors array.
 Return ONLY valid JSON, no markdown or explanation.`
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+    const result = await generateCompletion({
       messages: [{ role: "user", content: prompt }],
       system: "You are a strict API request validator. Always return valid JSON only.",
+      maxTokens: 1024,
     })
 
-    const content = response.content[0]
-    if (content.type !== "text") {
-      return { valid: true, errors: [] }
-    }
-
-    let jsonStr = content.text.trim()
+    let jsonStr = result.content.trim()
     if (jsonStr.startsWith("```json")) jsonStr = jsonStr.slice(7)
     else if (jsonStr.startsWith("```")) jsonStr = jsonStr.slice(3)
     if (jsonStr.endsWith("```")) jsonStr = jsonStr.slice(0, -3)
@@ -95,7 +81,7 @@ Return ONLY valid JSON, no markdown or explanation.`
 }
 
 /**
- * Transform stored data to match the endpoint's response schema using Claude.
+ * Transform stored data to match the endpoint's response schema using AI.
  * Falls back to raw data if transformation fails.
  */
 export async function generateStatefulResponse(
@@ -128,10 +114,8 @@ export async function generateStatefulResponse(
     }
   }
 
-  // Use Claude to transform stored data to match response schema
+  // Use AI to transform stored data to match response schema
   try {
-    const anthropic = getAnthropic()
-
     const customInstructionSection = customInstruction
       ? `
 **** CRITICAL - CUSTOM INSTRUCTION (HIGHEST PRIORITY) ****
@@ -166,40 +150,20 @@ Return a JSON object with this EXACT structure:
 If custom instruction requests a different status code, change the statusCode field accordingly.
 Return ONLY this JSON object, no markdown or explanation.`
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 16384,
+    const result = await generateCompletion({
       messages: [{ role: "user", content: prompt }],
       system: "You transform data to match schemas. Return ONLY valid JSON, no markdown or explanation.",
+      maxTokens: 16384,
     })
 
-    // Check for truncation
-    if (response.stop_reason === "max_tokens") {
-      console.warn("Response truncated, falling back to raw data")
-      return {
-        statusCode,
-        body: dbRecord,
-        headers: { "X-Stateful-Response": "true", "X-Schema-Transform": "failed" },
-      }
-    }
-
-    const content = response.content[0]
-    if (content.type !== "text") {
-      return {
-        statusCode,
-        body: dbRecord,
-        headers: { "X-Stateful-Response": "true" },
-      }
-    }
-
-    let jsonStr = content.text.trim()
+    let jsonStr = result.content.trim()
     if (jsonStr.startsWith("```json")) jsonStr = jsonStr.slice(7)
     else if (jsonStr.startsWith("```")) jsonStr = jsonStr.slice(3)
     if (jsonStr.endsWith("```")) jsonStr = jsonStr.slice(0, -3)
 
     const parsed = JSON.parse(jsonStr.trim())
 
-    // Extract statusCode and body from Claude's response
+    // Extract statusCode and body from AI's response
     const finalStatusCode = parsed.statusCode || statusCode
     const finalBody = parsed.body !== undefined ? parsed.body : parsed
 
@@ -301,8 +265,6 @@ export async function generateStateWriteResponse(
 
   // Transform to match schema
   try {
-    const anthropic = getAnthropic()
-
     const customInstructionSection = customInstruction
       ? `
 **** CRITICAL - CUSTOM INSTRUCTION (HIGHEST PRIORITY) ****
@@ -336,30 +298,20 @@ Return a JSON object with this EXACT structure:
 If custom instruction requests a different status code, change the statusCode field accordingly.
 Return ONLY this JSON object, no markdown or explanation.`
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 16384,
+    const result = await generateCompletion({
       messages: [{ role: "user", content: prompt }],
       system: "You transform data to match schemas. Return ONLY valid JSON.",
+      maxTokens: 16384,
     })
 
-    if (response.stop_reason === "max_tokens") {
-      return { statusCode, body: savedRecord, headers: { "X-Stateful-Response": "true" } }
-    }
-
-    const content = response.content[0]
-    if (content.type !== "text") {
-      return { statusCode, body: savedRecord }
-    }
-
-    let jsonStr = content.text.trim()
+    let jsonStr = result.content.trim()
     if (jsonStr.startsWith("```json")) jsonStr = jsonStr.slice(7)
     else if (jsonStr.startsWith("```")) jsonStr = jsonStr.slice(3)
     if (jsonStr.endsWith("```")) jsonStr = jsonStr.slice(0, -3)
 
     const parsed = JSON.parse(jsonStr.trim())
 
-    // Extract statusCode and body from Claude's response
+    // Extract statusCode and body from AI's response
     const finalStatusCode = parsed.statusCode || statusCode
     const finalBody = parsed.body !== undefined ? parsed.body : parsed
 

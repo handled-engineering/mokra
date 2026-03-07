@@ -1,11 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk"
 import { MockEndpoint } from "@prisma/client"
-
-function getAnthropic() {
-  return new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  })
-}
+import { generateCompletion, AIProvider } from "./providers"
 
 interface StateEntry {
   resourceType: string
@@ -25,6 +19,8 @@ interface GenerateResponseParams {
   serviceContext?: string // User's custom context for the service
   endpointContext?: string // User's custom context for this specific endpoint
   customInstruction?: string // Per-request custom instruction from x-custom-instruction header
+  endpointNotes?: string // Notes from notes.md file for file-based endpoints
+  provider?: AIProvider // Optional AI provider override
 }
 
 interface GeneratedResponse {
@@ -39,7 +35,7 @@ interface GeneratedResponse {
 }
 
 export async function generateMockResponse(params: GenerateResponseParams): Promise<GeneratedResponse> {
-  const { endpoint, method, path, pathParams, queryParams, body, existingState, documentation, serviceContext, endpointContext, customInstruction } = params
+  const { endpoint, method, path, pathParams, queryParams, body, existingState, documentation, serviceContext, endpointContext, customInstruction, endpointNotes, provider } = params
 
   // Build context about existing state
   const stateContext = existingState.length > 0
@@ -54,6 +50,14 @@ export async function generateMockResponse(params: GenerateResponseParams): Prom
 IMPORTANT - User Custom Context (FOLLOW THESE INSTRUCTIONS):
 ${serviceContext ? `Service-level context: ${serviceContext}` : ""}
 ${endpointContext ? `Endpoint-specific context: ${endpointContext}` : ""}
+`
+    : ""
+
+  // Build endpoint notes section (from notes.md file)
+  const endpointNotesSection = endpointNotes
+    ? `
+ENDPOINT NOTES (Important context for this endpoint):
+${endpointNotes}
 `
     : ""
 
@@ -82,7 +86,7 @@ ${customInstructionSection}
 
 API Documentation Context:
 ${documentation}
-${customContextSection}
+${customContextSection}${endpointNotesSection}
 Endpoint Details:
 - Method: ${method}
 - Path Pattern: ${endpoint.path}
@@ -125,29 +129,17 @@ The stateUpdate is optional - only include it if this request modifies data.
 Return ONLY valid JSON, no markdown code blocks or explanation.`
 
   try {
-    const anthropic = getAnthropic()
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      system: "You are a mock API server that generates realistic API responses. Always return valid JSON only, no markdown or explanation.",
-    })
-
-    const content = response.content[0]
-    if (content.type !== "text") {
-      return {
-        statusCode: 500,
-        body: { error: "Failed to generate response" },
-      }
-    }
+    const result = await generateCompletion(
+      {
+        messages: [{ role: "user", content: prompt }],
+        system: "You are a mock API server that generates realistic API responses. Always return valid JSON only, no markdown or explanation.",
+        maxTokens: 4096,
+      },
+      provider
+    )
 
     // Clean the response - remove any markdown code blocks if present
-    let jsonStr = content.text.trim()
+    let jsonStr = result.content.trim()
     if (jsonStr.startsWith("```json")) {
       jsonStr = jsonStr.slice(7)
     } else if (jsonStr.startsWith("```")) {

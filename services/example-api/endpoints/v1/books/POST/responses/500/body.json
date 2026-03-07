@@ -1,0 +1,12 @@
+{
+  "error": {
+    "type": "server_error",
+    "code": "internal_error",
+    "message": "An unexpected error occurred while processing your request",
+    "details": {
+      "request_id": "req_xyz789abc",
+      "timestamp": "2024-03-06T10:30:00Z",
+      "support_url": "https://support.example.com"
+    }
+  }
+}

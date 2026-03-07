@@ -1,0 +1,4 @@
+{
+  "Content-Type": "application/json",
+  "WWW-Authenticate": "Bearer realm=\"api\", error=\"invalid_token\""
+}

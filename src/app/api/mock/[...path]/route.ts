@@ -1,6 +1,16 @@
 import { NextResponse, NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { MockEngine } from "@/lib/mock-engine"
+import {
+  ServiceLoader,
+  toMockService,
+  buildEndpointNotesMap,
+} from "@/lib/services"
+
+// Initialize service loader (singleton)
+const serviceLoader = new ServiceLoader({
+  cacheTTL: process.env.NODE_ENV === "development" ? 0 : 300000,
+})
 
 async function handleMockRequest(req: NextRequest, segments: string[]) {
   // First segment is the service slug
@@ -63,8 +73,35 @@ async function handleMockRequest(req: NextRequest, segments: string[]) {
     )
   }
 
+  // Try to load service from filesystem first
+  const fileService = await serviceLoader.loadService(serviceSlug)
+
+  // Determine which service to use and build endpoint notes
+  let serviceForEngine: typeof project.service
+  let endpointNotesMap: Record<string, string> = {}
+
+  if (fileService) {
+    // Use file-based service - convert to MockEngine compatible format
+    const mockService = toMockService(fileService)
+    serviceForEngine = {
+      ...project.service,
+      endpoints: mockService.endpoints as typeof project.service.endpoints,
+      documentation: fileService.readme || project.service.documentation,
+      isActive: fileService.isActive,
+    }
+
+    // Build endpoint notes map from file-based endpoints
+    const notesMap = buildEndpointNotesMap(fileService)
+    notesMap.forEach((value, key) => {
+      endpointNotesMap[key] = value
+    })
+  } else {
+    // Fall back to database service
+    serviceForEngine = project.service
+  }
+
   // Check if service is active
-  if (!project.service.isActive) {
+  if (!serviceForEngine.isActive) {
     return NextResponse.json(
       {
         error: {
@@ -98,7 +135,7 @@ async function handleMockRequest(req: NextRequest, segments: string[]) {
     headers[key] = value
   })
 
-  // Build endpoint context map
+  // Build endpoint context map from database
   const endpointContextMap: Record<string, string> = {}
   for (const ctx of project.endpointContexts) {
     endpointContextMap[ctx.endpointId] = ctx.context
@@ -106,10 +143,11 @@ async function handleMockRequest(req: NextRequest, segments: string[]) {
 
   // Create mock engine and handle request
   const engine = new MockEngine(
-    project.service,
+    serviceForEngine,
     project.id,
     project.customContext || undefined,
-    endpointContextMap
+    endpointContextMap,
+    endpointNotesMap
   )
   const response = await engine.handleRequest({
     method: req.method,
@@ -125,8 +163,9 @@ async function handleMockRequest(req: NextRequest, segments: string[]) {
   return NextResponse.json(response.body, {
     status: response.statusCode,
     headers: {
-      "X-Mock-Service": project.service.name,
+      "X-Mock-Service": serviceForEngine.name,
       "X-Stateful-Mode": isStateful ? "enabled" : "disabled",
+      "X-Source": fileService ? "filesystem" : "database",
       ...response.headers,
     },
   })

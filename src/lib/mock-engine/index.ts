@@ -37,24 +37,31 @@ interface EndpointContextMap {
   [endpointId: string]: string
 }
 
+interface EndpointNotesMap {
+  [endpointId: string]: string
+}
+
 export class MockEngine {
   private service: MockService & { endpoints: MockEndpoint[] }
   private stateManager: StateManager
   private projectId: string
   private serviceContext?: string
   private endpointContexts: EndpointContextMap
+  private endpointNotes: EndpointNotesMap
 
   constructor(
     service: MockService & { endpoints: MockEndpoint[] },
     projectId: string,
     serviceContext?: string,
-    endpointContexts: EndpointContextMap = {}
+    endpointContexts: EndpointContextMap = {},
+    endpointNotes: EndpointNotesMap = {}
   ) {
     this.service = service
     this.projectId = projectId
     this.stateManager = new StateManager(projectId)
     this.serviceContext = serviceContext
     this.endpointContexts = endpointContexts
+    this.endpointNotes = endpointNotes
   }
 
   private isStatefulRequest(headers: Record<string, string>): boolean {
@@ -439,6 +446,7 @@ export class MockEngine {
       serviceContext: this.serviceContext,
       endpointContext: this.endpointContexts[endpoint.id],
       customInstruction,
+      endpointNotes: this.endpointNotes[endpoint.id],
     })
 
     // Handle state updates from AI (for backwards compatibility)

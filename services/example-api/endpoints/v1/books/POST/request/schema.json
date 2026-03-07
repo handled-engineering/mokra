@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["title", "author"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "The book title"
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The book author"
+    },
+    "isbn": {
+      "type": "string",
+      "pattern": "^978-[0-9]{10}$",
+      "description": "ISBN-13 format"
+    },
+    "page_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of pages"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Publication date (YYYY-MM-DD)"
+    }
+  }
+}

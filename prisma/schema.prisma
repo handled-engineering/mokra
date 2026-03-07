@@ -8,7 +8,8 @@ datasource db {
 }
 
 enum UserRole {
-  ADMIN
+  CONTRIBUTOR
+  ADMIN // @deprecated - use CONTRIBUTOR instead
   USER
 }
 
